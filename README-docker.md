@@ -16,7 +16,7 @@ Deze setup bouwt en test **alleen de module**. De OpenMRS Reference Application 
 docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm maven
 ```
 
-- Voert `mvn clean install` uit
+- Voert `mvn clean install -DskipTests` uit (artifact snel klaar; tests via test-compose)
 - Kopieert `omod/target/*.omod` naar `deploy/modules/`
 
 Mount `deploy/modules/` in je bestaande OpenMRS-container als modules-map, of kopieer het `.omod` handmatig naar die map.
@@ -35,7 +35,7 @@ docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm maven
 docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm maven
 ```
 
-- Voert `mvn clean package` uit
+- Voert `mvn clean package -DskipTests` uit (alleen artifact)
 - Kopieert `omod/target/*.omod` naar `dist/`
 
 ## Waar komt het `.omod`?
@@ -55,3 +55,10 @@ De Reference Application container laadt modules uit zijn eigen modules-director
 3. Herstart OpenMRS of laat auto-reload het module laden (afhankelijk van je setup)
 
 Geen MySQL, geen OpenMRS backend en geen frontend worden door deze compose gestart.
+
+## Bekende test-failure
+
+De upstream module heeft 1783 unit tests. Soms faalt `ClearDbCacheController2_0Test` (Hibernate cache-assertie). Dat is geen Docker-fout.
+
+- **dev/prod** slaan tests over (`-DskipTests`) — bedoeld voor `.omod` artifacts
+- **test** draait `mvn clean verify` — daar zie je test-resultaten

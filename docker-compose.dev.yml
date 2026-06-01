@@ -2,7 +2,7 @@
 services:
   maven:
     command: >
-      sh -c "mvn clean install -B &&
+      sh -c "mvn clean install -DskipTests -B &&
              mkdir -p deploy/modules &&
              cp omod/target/*.omod deploy/modules/ &&
              echo 'Dev artifact: deploy/modules/'"

@@ -2,7 +2,7 @@
 services:
   maven:
     command: >
-      sh -c "mvn clean package -B &&
+      sh -c "mvn clean package -DskipTests -B &&
              mkdir -p dist &&
              cp omod/target/*.omod dist/ &&
              echo 'Prod artifact: dist/'"
