@@ -1,0 +1,8 @@
+# Dev: module bouwen en .omod klaarzetten voor de bestaande OpenMRS-container.
+services:
+  maven:
+    command: >
+      sh -c "mvn clean install -B &&
+             mkdir -p deploy/modules &&
+             cp omod/target/*.omod deploy/modules/ &&
+             echo 'Dev artifact: deploy/modules/'"

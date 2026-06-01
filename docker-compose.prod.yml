@@ -1,0 +1,8 @@
+# Prod: productie-build; alleen het .omod artifact in dist/.
+services:
+  maven:
+    command: >
+      sh -c "mvn clean package -B &&
+             mkdir -p dist &&
+             cp omod/target/*.omod dist/ &&
+             echo 'Prod artifact: dist/'"
