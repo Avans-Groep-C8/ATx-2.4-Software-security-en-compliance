@@ -15,6 +15,9 @@ jobs:
     name: SAST & SCA (Snyk)
     runs-on: ubuntu-latest
 
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,30 +40,28 @@ jobs:
       - name: Install Snyk CLI
         run: npm install -g snyk
 
-      - name: Authenticate Snyk
-        run: snyk auth ${{ secrets.SNYK_TOKEN }}
-
       # SCA – afhankelijkheden scannen op bekende CVE's
       - name: SCA – snyk test
         continue-on-error: true
-        run: snyk test --all-projects --json > snyk-sca.json
+        run: snyk test --all-projects --json > snyk-sca.json || echo 'null' > snyk-sca.json
 
       # SAST – broncode scannen op beveiligingsproblemen
       - name: SAST – snyk code test
         continue-on-error: true
-        run: snyk code test --json > snyk-sast.json
+        run: snyk code test --json > snyk-sast.json || echo 'null' > snyk-sast.json
 
       # SBOM – software bill of materials genereren via Snyk
       - name: SBOM – snyk sbom
         continue-on-error: true
-        run: snyk sbom --format cyclonedx1.4+json > snyk-sbom.json
+        run: snyk sbom --format cyclonedx1.4+json > snyk-sbom.json || echo 'null' > snyk-sbom.json
 
-      # Zorg dat elk bestand bestaat (ook bij fout of geen bevindingen)
-      - name: Ensure output files exist
+      # Valideer dat elk bestand geldig JSON is
+      - name: Validate JSON output files
         run: |
-          [ -f snyk-sca.json ]  || echo 'null' > snyk-sca.json
-          [ -f snyk-sast.json ] || echo 'null' > snyk-sast.json
-          [ -f snyk-sbom.json ] || echo 'null' > snyk-sbom.json
+          for f in snyk-sca.json snyk-sast.json snyk-sbom.json; do
+            [ -f "$f" ] || echo 'null' > "$f"
+            jq empty "$f" 2>/dev/null || echo 'null' > "$f"
+          done
 
       # Voeg de drie ruwe outputs samen in één artifact
       - name: Merge raw output into snyk-results.json
