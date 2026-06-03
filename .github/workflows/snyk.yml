@@ -49,12 +49,12 @@ jobs:
       # SAST – broncode scannen op beveiligingsproblemen
       - name: SAST – snyk code test
         continue-on-error: true
-        run: snyk code test --json > snyk-sast.json 2>/dev/null; true
+        run: snyk code test --org=hanserief12 --json > snyk-sast.json 2>/dev/null; true
 
       # SBOM – software bill of materials genereren via Snyk
       - name: SBOM – snyk sbom
         continue-on-error: true
-        run: snyk sbom --format cyclonedx1.4+json > snyk-sbom.json 2>/dev/null; true
+        run: snyk sbom --org=hanserief12 --format cyclonedx1.4+json > snyk-sbom.json 2>&1; true
 
       # Valideer dat elk bestand geldig JSON is
       - name: Validate JSON output files
