@@ -37,7 +37,8 @@ jobs:
         with:
           format: cyclonedx-json
           output-file: docs/sbom.cdx.json
-
+          upload-artifact: false
+          upload-release-assets: false
       - name: Upload SBOM as CI artifact
         uses: actions/upload-artifact@v4
         with:
