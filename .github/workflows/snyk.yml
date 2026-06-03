@@ -51,18 +51,14 @@ jobs:
         continue-on-error: true
         run: snyk code test --org=hanserief12 --json > snyk-sast.json 2>/dev/null; true
 
-      # SBOM – software bill of materials genereren via Snyk
-      - name: SBOM – snyk sbom
-        continue-on-error: true
-        run: snyk sbom --org=hanserief12 --file=pom.xml --format cyclonedx1.4+json > snyk-sbom.json 2>snyk-sbom-stderr.txt; true
-
-      - name: Debug – SBOM raw stdout (tijdelijk)
-        if: always()
-        run: |
-          echo "=== snyk-sbom.json inhoud ==="
-          cat snyk-sbom.json 2>/dev/null || echo "(bestand leeg of niet aanwezig)"
-          echo "=== snyk-sbom-stderr.txt inhoud ==="
-          cat snyk-sbom-stderr.txt 2>/dev/null || echo "(geen stderr)"
+      # SBOM – CycloneDX via Anchore/Syft (snyk sbom vereist betaald plan)
+      - name: SBOM – anchore/sbom-action
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          format: cyclonedx-json
+          output-file: snyk-sbom.json
+          upload-artifact: false
+          upload-release-assets: false
 
       # Valideer dat elk bestand geldig JSON is
       - name: Validate JSON output files
