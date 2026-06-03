@@ -54,7 +54,11 @@ jobs:
       # SBOM – software bill of materials genereren via Snyk
       - name: SBOM – snyk sbom
         continue-on-error: true
-        run: snyk sbom --org=hanserief12 --format cyclonedx1.4+json > snyk-sbom.json 2>&1; true
+        run: snyk sbom --org=hanserief12 --file=pom.xml --format cyclonedx1.4+json > snyk-sbom.json 2>snyk-sbom-stderr.txt; true
+
+      - name: Debug – SBOM stderr (tijdelijk)
+        if: always()
+        run: cat snyk-sbom-stderr.txt 2>/dev/null || echo "(geen stderr)"
 
       # Valideer dat elk bestand geldig JSON is
       - name: Validate JSON output files
