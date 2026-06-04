@@ -2,6 +2,8 @@
 
 Deze setup bouwt en test **alleen de module**. De OpenMRS Reference Application draait al apart in Docker (`http://localhost/openmrs/`). Er start hier geen database, backend of frontend.
 
+**Git:** alleen branch `main` is trunk; CI en artifacts staan in [docs/pipeline-strategie.md](docs/pipeline-strategie.md).
+
 ## Omgevingen
 
 | Omgeving | Doel | Artifact |

@@ -1,18 +1,23 @@
+# Trunk CI: PR en main alleen. Zelfde testpad als docker-compose.test.yml (mvn verify).
 name: CI
 
 on:
   push:
-    branches: [ main, test, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main, test, develop ]
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: build
+  verify:
+    name: build and test
     runs-on: ubuntu-latest
 
     steps:
@@ -26,31 +31,28 @@ jobs:
           java-version: '8'
           cache: maven
 
-      - name: Build (compile, skip tests)
-        run: mvn -B clean install -DskipTests --no-transfer-progress
-
-  test:
-    name: test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '8'
-          cache: maven
-
-      - name: Run tests
-        run: mvn -B verify --no-transfer-progress
+      - name: Verify (mvn clean verify)
+        run: mvn -B clean verify --no-transfer-progress
 
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: surefire-reports
+          name: surefire-reports-${{ github.run_id }}
           path: '**/target/surefire-reports/*.xml'
           if-no-files-found: ignore
+
+      - name: Build dev artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p deploy/modules
+          OMOD=$(ls omod/target/*.omod | head -1)
+          cp "$OMOD" "deploy/modules/webservices.rest-dev-${GITHUB_SHA::7}.omod"
+
+      - name: Upload dev module artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: omod-dev-${{ github.sha }}
+          path: deploy/modules/*.omod
+          retention-days: 90
