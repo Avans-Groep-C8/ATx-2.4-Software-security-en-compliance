@@ -1,0 +1,51 @@
+# Prod-artifact: handmatig na goedkeuring (GitHub Environment "production", 2 reviewers).
+# Zelfde build als docker-compose.prod.yml (mvn package -DskipTests).
+name: Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref (branch/tag/SHA); leeg = huidige main'
+        required: false
+        default: main
+
+concurrency:
+  group: promote-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prod-artifact:
+    name: Build production artifact
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Package prod artifact
+        run: |
+          mvn -B clean package -DskipTests --no-transfer-progress
+          mkdir -p dist
+          OMOD=$(ls omod/target/*.omod | head -1)
+          cp "$OMOD" "dist/webservices.rest-prod-${GITHUB_SHA::7}.omod"
+
+      - name: Upload prod module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: omod-prod-${{ github.sha }}
+          path: dist/*.omod
+          retention-days: 365
