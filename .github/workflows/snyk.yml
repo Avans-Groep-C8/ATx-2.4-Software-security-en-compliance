@@ -1,0 +1,86 @@
+name: Snyk Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snyk:
+    name: SAST & SCA (Snyk)
+    runs-on: ubuntu-latest
+
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      - name: Build project (skip tests)
+        run: mvn -B clean install -DskipTests --no-transfer-progress
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      # SCA – afhankelijkheden scannen op bekende CVE's
+      # exit 0 = geen vulns, exit 1 = vulns gevonden (beide leveren geldige JSON)
+      - name: SCA – snyk test
+        continue-on-error: true
+        run: snyk test --all-projects --json > snyk-sca.json 2>/dev/null; true
+
+      # SAST – broncode scannen op beveiligingsproblemen
+      - name: SAST – snyk code test
+        continue-on-error: true
+        run: snyk code test --org=hanserief12 --json > snyk-sast.json 2>/dev/null; true
+
+      # SBOM – CycloneDX via Anchore/Syft (snyk sbom vereist betaald plan)
+      - name: SBOM – anchore/sbom-action
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          format: cyclonedx-json
+          output-file: snyk-sbom.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      # Valideer dat elk bestand geldig JSON is
+      - name: Validate JSON output files
+        run: |
+          for f in snyk-sca.json snyk-sast.json snyk-sbom.json; do
+            [ -f "$f" ] || echo 'null' > "$f"
+            jq empty "$f" 2>/dev/null || echo 'null' > "$f"
+          done
+
+      # Voeg de drie ruwe outputs samen in één artifact
+      - name: Merge raw output into snyk-results.json
+        run: |
+          jq -n \
+            --slurpfile sca  snyk-sca.json \
+            --slurpfile sast snyk-sast.json \
+            --slurpfile sbom snyk-sbom.json \
+            '{sca: $sca[0], sast: $sast[0], sbom: $sbom[0]}' \
+            > snyk-results.json
+
+      - name: Upload snyk-results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-results
+          path: snyk-results.json
