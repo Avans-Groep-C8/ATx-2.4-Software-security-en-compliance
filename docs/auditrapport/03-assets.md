@@ -19,7 +19,7 @@
 | ID | Asset | Categorie | Risico |
 |----|-------|-----------|--------|
 | A-08 | Encounters (zorgcontactmomenten) | Medisch | Midden |
-| A-11 | Systeeminstellingen (global properties) | Systeem | Midden |
+| A-11 | Systeeminstellingen (`/systemsetting`) | Systeem | Midden |
 | A-12 | Concept Dictionary (medische terminologie) | Systeem | Midden |
 | A-13 | Docker-omgeving & compose-bestanden | Infrastructuur | Midden |
 | A-14 | CI/CD-pipeline (GitHub Actions / Bamboo) | Infrastructuur | Laag |
