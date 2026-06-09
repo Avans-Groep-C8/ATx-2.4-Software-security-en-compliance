@@ -66,6 +66,10 @@ nb-configuration.xml
 *~
 #############
 
+### CI / lokale artifacts ###
+/deploy/modules/
+/dist/
+
 ### OpenMRS Files ###
 /webapp/activemq-data
 /webapp/src/main/webapp/WEB-INF/tags/module
