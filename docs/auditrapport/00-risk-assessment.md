@@ -5,7 +5,7 @@
 **Norm:** NEN-7510:2024-2 (+ NEN 7512, NEN 7513 waar relevant)  
 **Classificatie:** Vertrouwelijk (5.12)  
 **Datum:** 2026-06-09  
-**Status:** Definitief (risicoanalyse) — pentest P1 uitgevoerd 2026-06-09; besluiten fix/accept/defer nog open
+**Status:** Definitief (risicoanalyse) — pentest P1 uitgevoerd 2026-06-09; besluiten fix/accept/defer vastgesteld 2026-06-10
 
 ---
 
@@ -123,13 +123,14 @@ Kritieke afwezige controls: MFA (8.5), brute-force bescherming (8.5), rate limit
 
 | PT-ID | Ernst | Dreiging | Aanbeveling | Besluit | SEC |
 |-------|-------|----------|-------------|---------|-----|
-| PT-003 | **Critical** | T1 | Fix | _open_ | SEC-019 — anoniem `POST /cleardbcache` → 204 |
-| PT-004 | **High** | T1/T5 | Fix | _open_ | SEC-007 — anoniem `settings.form` → 200 + stack trace |
-| PT-001 | Medium | T5 | Fix | _open_ | SEC-010 — stack traces in foutresponses |
-| PT-005 | Medium | T1 | Fix | _open_ | SEC-019 — `loggedinusers` → 500 i.p.v. 401 |
-| PT-002 | Medium | T1 | Defer | _open_ | SEC-001 — verkeerd patient-endpoint geeft 400; authz OK met `?q=` |
+| PT-003 | **Critical** | T1 | Fix | _fix_ | SEC-019 — anoniem `POST /cleardbcache` → 204 |
+| PT-004 | **High** | T1/T5 | Fix | _fix_ | SEC-007 — anoniem `settings.form` → 200 + stack trace |
+| PT-001 | Medium | T5 | Fix | _defer_ | SEC-010 — stack traces in foutresponses |
+| PT-005 | Medium | T1 | Fix | _defer_ | SEC-019 — `loggedinusers` → 500 i.p.v. 401 |
+| PT-002 | Medium | T1 | Defer | _defer_ | SEC-001 — verkeerd patient-endpoint geeft 400; authz OK met `?q=` |
+| INFO-001 | Info | — | Accept | _accept_ | Normale redirect + security headers |
 
-*Besluiten nog niet genomen — zie `03-bevindingen.md` §8. Tester: Boyan.*
+*Besluiten vastgesteld 2026-06-10 — zie `03-bevindingen.md` §8. Tester: Boyan.*
 
 **Geslaagde P1-controles (T2):**
 
@@ -192,7 +193,7 @@ Zie bewijs: `docs/pentest/evidence/` + `03-bevindingen.md`.
 | SEC-001, SEC-019 | Autorisatie-review alle resources | Module-team |
 | SEC-006 | Snyk/CodeQL triage eerste artifact | Security champion |
 | SEC-009 | HTTPS op test-omgeving afdwingen | Platform |
-| Pentest uitgevoerd | Besluiten §8 + hertest na fix | Boyan ✓ uitgevoerd 2026-06-09; besluiten _open_ |
+| Pentest uitgevoerd | Besluiten §8 + hertest na fix | Boyan ✓ uitgevoerd 2026-06-09; besluiten ✓ vastgesteld 2026-06-10 |
 
 ### Fase 2 — Kort termijn (maand 2–3): P2 backlog
 
@@ -215,8 +216,10 @@ Na P1-fixes: herhaal Burp-hertest + handmatige IDOR-tests; werk `03-bevindingen.
 | Pipeline soft-fail | Snyk blokkeert niet op CVE | Geaccepteerd mits SEC-006 triage actief (`false-positives-beleid.md`) |
 | Platform-afhankelijkheden | MFA, SIEM, encryptie-at-rest | Uitgesteld naar P2/P3 — eigenaar platform |
 | Organisatorische controls | Vendor risk, BCP, functiescheiding | P3/P4 — management |
-| Pentest Critical open | PT-003 cleardbcache anoniem | **Niet geaccepteerd voor productie** — fix verplicht |
-| Pentest T2 positief | Geen anonieme patiëntdata | Bevestigt SEC-001 deels effectief; resterende P1-fixes nodig |
+| Pentest Critical open | PT-003 cleardbcache anoniem | **Niet geaccepteerd voor productie** — fix verplicht (besluit: Fix) |
+| Pentest High open | PT-004 settings.form anoniem | **Niet geaccepteerd voor productie** — fix verplicht (besluit: Fix) |
+| Pentest Medium uitgesteld | PT-001, PT-005 stack traces / error handling | Uitgesteld (Defer) — backlog P2 |
+| Pentest T2 positief | Geen anonieme patiëntdata | Bevestigt SEC-001 deels effectief; PT-003/004-fixes nodig voor productie |
 
 **Productie-gate:** Geen deployment met echte patiëntdata totdat:
 
@@ -317,4 +320,4 @@ Raming op basis van **€ 600/uur** (senior Java/security consultant, NL markt 2
 
 ---
 
-*Versie 1.1 — 2026-06-09. Pentest P1 (T1/T2) verwerkt in §4.4. Hertest na PT-003/004-fix.*
+*Versie 1.2 — 2026-06-10. Pentest-besluiten vastgesteld (§4.4). Hertest na PT-003/004-fix.*

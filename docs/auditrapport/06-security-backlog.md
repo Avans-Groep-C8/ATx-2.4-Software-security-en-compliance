@@ -2,7 +2,7 @@
 
 **Document:** `docs/auditrapport/06-security-backlog.md`  
 **Module:** OpenMRS `webservices.rest` v3.2.0  
-**Status:** Definitief — pentest P1 (2026-06-09, Boyan) bevestigt SEC-007, SEC-019, SEC-010; SEC-001 deels effectief (T2 Pass); besluiten nog open
+**Status:** Definitief — pentest P1 (2026-06-09, Boyan) bevestigt SEC-007, SEC-019, SEC-010; SEC-001 deels effectief (T2 Pass); pentest-besluiten vastgesteld 2026-06-10 (PT-003/004 Fix, PT-001/002/005 Defer)
 
 ---
 
@@ -176,4 +176,4 @@ flowchart TD
 
 ---
 
-*Laatste update: 2026-06-09 — Boyan / ATx-2.4 Software security & compliance*
+*Laatste update: 2026-06-10 — Boyan / ATx-2.4 Software security & compliance*
