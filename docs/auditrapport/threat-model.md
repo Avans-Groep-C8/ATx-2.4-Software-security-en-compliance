@@ -293,7 +293,7 @@ Op basis van dit threat model worden de volgende risico’s meegenomen naar risi
 | ID | Threat | Reden voor selectie | Vervolgdocument |
 |---|---|---|---|
 | L1-01 | Misbruik van Basic Auth credentials of sessie | Direct risico op ongeautoriseerde toegang tot patiëntdata. | [04-risicomatrix.md](./04-risicomatrix.md), [05-bowtie.md](./05-bowtie.md) |
-| L1-02 | BOLA / IDOR via UUID of resource-ID | Direct risico op onbevoegde inzage in patiëntdata. | [04-risicomatrix.md](./04-risicomatrix.md), [05-bowtie.md](./05-bowtie.md), [docs/pentest/](../pentest/) |
+| L1-02 | BOLA / IDOR via UUID of resource-ID | Direct risico op onbevoegde inzage in patiëntdata. | [04-risicomatrix.md](./04-risicomatrix.md), [docs/pentest/](../pentest/) |
 | L1-03 | Brute-force, scraping of bulk requests | Kan leiden tot bulk-extractie of beschikbaarheidsproblemen. | [04-risicomatrix.md](./04-risicomatrix.md), [docs/pentest/](../pentest/) |
 | L1-05 | Onvoldoende audit trail | Incidenten kunnen niet volledig gereconstrueerd worden. | [09-logging-gap-analyse.md](./09-logging-gap-analyse.md) |
 | L1-07 | Onveilige codewijziging | Kan autorisatiefouten introduceren in kritieke endpoints. | [06-security-backlog.md](./06-security-backlog.md), code review |
