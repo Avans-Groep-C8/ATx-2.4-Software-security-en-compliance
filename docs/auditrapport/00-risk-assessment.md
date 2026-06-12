@@ -30,7 +30,7 @@ De OpenMRS REST Web Services Module ontsluit **herleidbare patiëntgegevens** vi
 | **Pentest T2 (patiëntdata)** | **Beheerst** — anonieme patient-read → 401, geen data-lek |
 | **Pentest T1 (API-toegang)** | **Onvoldoende** — `cleardbcache` anoniem 204; `settings.form` anoniem bereikbaar |
 | **Aanbevolen actie** | PT-003/PT-004 direct fixen; daarna hertest; P1-backlog resterend |
-| **Geschatte investering P1+P2** | € 96.000 – € 166.000 (zie §8) |
+| **Geschatte investering P1+P2** | € 96.000 – € 165.600 (zie §8) |
 | **Restrisico na P1-fixes + hertest** | Middel (geel) — MFA, SIEM, RBAC-review blijven nodig |
 
 ---
@@ -218,7 +218,7 @@ Na P1-fixes: herhaal Burp-hertest + handmatige IDOR-tests; werk `03-bevindingen.
 | Organisatorische controls | Vendor risk, BCP, functiescheiding | P3/P4 — management |
 | Pentest Critical open | PT-003 cleardbcache anoniem | **Niet geaccepteerd voor productie** — fix verplicht (besluit: Fix) |
 | Pentest High open | PT-004 settings.form anoniem | **Niet geaccepteerd voor productie** — fix verplicht (besluit: Fix) |
-| Pentest Medium uitgesteld | PT-001, PT-005 stack traces / error handling | Uitgesteld (Defer) — backlog P2 |
+| Pentest Medium uitgesteld | PT-001, PT-005 stack traces / error handling | Uitgesteld (Defer) — SEC-010 (backlog P1, quick win) / SEC-019 (P2) |
 | Pentest T2 positief | Geen anonieme patiëntdata | Bevestigt SEC-001 deels effectief; PT-003/004-fixes nodig voor productie |
 
 **Productie-gate:** Geen deployment met echte patiëntdata totdat:
