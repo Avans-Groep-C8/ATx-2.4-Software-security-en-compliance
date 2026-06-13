@@ -1,9 +1,9 @@
-# 5.7 Code coverage — onderbouwing en inrichting
+# 5.7 Code coverage onderbouwing en inrichting
 
 **Document:** `docs/auditrapport/07-code-coverage.md`
 **Module:** OpenMRS `webservices.rest` v3.2.0
 **Tool:** JaCoCo 0.8.13 (Maven)
-**Norm:** NEN-7510:2024-2 **8.29** (beveiligingstesten) en **8.25/8.28** (veilige ontwikkeling) — testresultaten moeten *aantoonbaar* en *reproduceerbaar* zijn.
+**Norm:** NEN-7510:2024-2 **8.29** (beveiligingstesten) en **8.25/8.28** (veilige ontwikkeling) testresultaten moeten *aantoonbaar* en *reproduceerbaar* zijn.
 
 ---
 
@@ -56,7 +56,7 @@ goed gedekt. `omod-common` (gedeelde DTO-/hulpklassen, weinig eigen logica) trek
 gemiddelde omlaag.
 
 > **Belangrijke nuance (eerlijk over de herkomst).** Deze 86,6 % komt vrijwel volledig uit de
-> **bestaande unit tests die OpenMRS zelf met de module meelevert** — niet uit tests die dit team
+> **bestaande unit tests die OpenMRS zelf met de module meelevert**  niet uit tests die dit team
 > heeft toegevoegd. Dit cijfer is dus een **geërfde baseline / nulmeting**, geen prestatie van het
 > project. De waarde van deze taak zit in het *meetbaar en bewaakt maken* van coverage (activeren,
 > rapport, gate, artefact), niet in het cijfer zelf. Zodra het team eigen code/tests toevoegt
@@ -74,7 +74,7 @@ de gemeten nulmeting. Conform de opdracht onderbouwen we expliciet zowel de bove
 **Waarom 80 % en niet lager?**
 
 - **Het moet de huidige stand bewaken.** De baseline is 86,6 %. Zou de gate op bv. 50 % staan, dan
-  zou de dekking flink kunnen wegzakken zonder dat de build het merkt — dan is de gate zinloos.
+  zou de dekking flink kunnen wegzakken zonder dat de build het merkt, dan is de gate zinloos.
   80 % houdt het bewezen niveau ongeveer vast.
 - **Risicogericht (NEN-7510 8.29).** De gate staat op de module die patiëntdata ontsluit; daar is een
   stevige ondergrens gerechtvaardigd.
@@ -95,7 +95,7 @@ gate gekozen, omdat de geërfde baseline daarvoor te laag is; dit is een explici
 De gate kijkt naar het **gemiddelde over de hele `omod`-bundle** (228 klassen). Dat betekent: als er
 later één klein, slecht getest bestand bijkomt, beweegt het gemiddelde nauwelijks en blijft de build
 groen. De gate vangt dus een *brede* terugval wel, maar een *lokaal* gat (één ongeteste nieuwe klasse)
-niet. Wie dat ook wil afdekken, kan later een aanvullende regel op PACKAGE-/CLASS-niveau toevoegen —
+niet. Wie dat ook wil afdekken, kan later een aanvullende regel op PACKAGE-/CLASS-niveau toevoegen,
 zie §6.
 
 ### Waarom geen gate op `omod-common`
@@ -127,7 +127,7 @@ daadwerkelijk een te lage dekking en is geen loze configuratie.
 
 ## 6. Hoe lees je het rapport (CI-artefact)
 
-1. GitHub Actions → run van workflow **CI** → sectie **Artifacts** → `jacoco-coverage-<run_id>`.
+1. GitHub Actions → run van workflow **CI** → sectie **Artifacts** -> `jacoco-coverage-<run_id>`.
 2. Uitpakken en `omod/target/site/jacoco/index.html` openen voor het doorklikbare HTML-overzicht.
 3. `jacoco.csv` / `jacoco.xml` zijn machine-leesbaar (bv. voor verdere analyse of een badge).
 
@@ -160,5 +160,5 @@ mvn -B clean verify -pl omod-common,omod -am
 | Pipeline-strategie | `docs/pipeline-strategie.md` |
 | Risk Assessment Report | `docs/auditrapport/00-risk-assessment.md` |
 
-*Versie 1.1 — 2026-06-11. Baseline gemeten en inrichting geverifieerd met volledige
+*2026-06-11. Baseline gemeten en inrichting geverifieerd met volledige
 `mvn clean verify` (1783 tests, gate getoetst op slagen én falen). JaCoCo 0.8.13.*
