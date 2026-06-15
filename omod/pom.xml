@@ -80,6 +80,34 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
+				<!-- prepare-agent + report worden geërfd uit de root-pluginManagement.
+				     Hier voegen we de coverage-gate toe: de build faalt als de
+				     instruction-coverage van deze module onder de drempel zakt
+				     (${jacoco.coverage.minimum}, standaard 0.80).
+				     Onderbouwing: docs/auditrapport/07-code-coverage.md -->
+				<executions>
+					<execution>
+						<id>check</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>INSTRUCTION</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.coverage.minimum}</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
