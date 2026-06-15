@@ -164,8 +164,15 @@ Belangrijke securitygrenzen zijn:
 | L1-06 | REST write endpoints → OpenMRS Core | Ongeautoriseerde wijziging van patiëntgegevens | Een actor kan medische gegevens wijzigen via write endpoints. | OpenMRS service- en privilegechecks. | Extra validatie en logging op kritieke wijzigingen nodig. | A.8.3 / A.8.15 |
 | L1-07 | CI/CD → module | Onveilige codewijziging | Een PR introduceert een autorisatiefout of kwetsbaarheid in de REST laag. | CodeQL/SAST en PR-review. | Security testcases voor kritieke endpoints zijn nodig. | A.8.29 / A.8.32 |
 | L1-08 | Dependencies → build | Kwetsbare dependency | Een bekende kwetsbaarheid in een dependency blijft aanwezig. | SBOM en SCA-scans. | Patchbeleid en updateadvies moeten traceerbaar zijn. | A.8.8 |
+| L1-09 | GitHub repository → CI pipeline | CI/CD pipeline manipulation | Een wijziging in workflowconfiguratie of buildscript kan de pipeline beïnvloeden en ongewenste code of artifacts produceren. | PR-review en GitHub Actions. | Workflow-permissions, branch protection en approval gates moeten aantoonbaar zijn. | A.8.25 / A.8.32 |
+| L1-10 | External Maven registry → Maven build | Supply-chain attack via Maven dependencies | Een kwetsbare of kwaadaardige dependency of plugin kan tijdens de build onderdeel worden van de module. | SCA, SBOM en Maven dependencybeheer. | Dependency pinning, updatebeleid en opvolging van SCA-bevindingen moeten traceerbaar zijn. | A.8.8 |
+| L1-11 | Docker Compose → runtimeomgeving | Docker misconfiguration leading to exposure | Compose-configuraties kunnen services, poorten of environment variables onbedoeld blootstellen. | Docker Compose-configuraties aanwezig. | Scheiding tussen dev/test/prod-config en controle op exposed services moet aantoonbaar zijn. | A.8.9 / A.8.20 |
+| L1-12 | CodeQL → securitybesluit | False sense of security from SAST-only scanning | CodeQL kan bekende codepatronen detecteren, maar mist mogelijk logische autorisatiefouten, IDOR of runtime-configuratiefouten. | CodeQL security scanning. | Aanvullende DAST, pentest en handmatige review blijven nodig. | A.8.28 / A.8.29 |
+| L1-13 | Integration-testconfiguratie → testomgeving | Hardcoded integration-test credentials | Testcredentials zoals `admin:Admin123` kunnen uitlekken of buiten de testcontext worden hergebruikt. | Testcredentials zijn bedoeld voor lokale/integration-testcontext. | Duidelijke afbakening, geen productiehergebruik en geen logging van secrets aantonen. | A.5.17 / A.8.5 |
 
-L1-07 en L1-08 zijn opgenomen als raakvlak met het ontwikkelproces. De volledige CI/CD-risicoanalyse staat in [04b-cicd-risico.md](./04b-cicd-risico.md).
+L1-01 t/m L1-06 beschrijven de primaire applicatierisico’s rond de OpenMRS REST API, zoals authenticatie, autorisatie, BOLA/IDOR, bulk requests, write endpoints en audit logging. Deze threats zijn afgeleid uit het container- en componentdiagram van de REST-module.
+
+L1-07 t/m L1-13 zijn opgenomen als raakvlak met het ontwikkelproces en de bredere attack surface. De volledige CI/CD-risicoanalyse staat in [04b-cicd-risico.md](./04b-cicd-risico.md). De Docker-, Maven-, CodeQL- en testcredential-risico’s zijn toegevoegd op basis van de attack surface analyse.
 
 ---
 
@@ -241,6 +248,11 @@ Voor dit threat model zijn vooral de volgende assetcategorieën relevant:
 | Systeemconfiguratie                  | Global properties, Concept Dictionary                                         | Foutieve configuratie kan leiden tot zwakkere beveiliging of onjuiste verwerking van medische data.       |
 | Logging en auditinformatie           | Audit logs, security events, audit metadata                                   | Nodig om achteraf te reconstrueren wie welke gegevens heeft ingezien of gewijzigd.                        |
 | Ontwikkel- en infrastructuuromgeving | Docker-omgeving, compose-bestanden, CI/CD-pipeline                            | Relevant als raakvlak, omdat onveilige configuratie of codewijzigingen de REST module kunnen beïnvloeden. |
+| Build artifacts / OMOD-module | Gegenereerde module-artifacts uit de CI/CD-pipeline | Manipulatie van artifacts kan leiden tot deployment van ongewenste of kwetsbare code. |
+| GitHub Actions workflows | Build-, test-, SAST-, SCA- en SBOM-workflows | Workflowconfiguratie bepaalt welke code wordt gebouwd, getest en vertrouwd. |
+| Maven dependencies | Directe en transitieve dependencies uit `pom.xml` | Kwetsbare of kwaadaardige dependencies kunnen onderdeel worden van de module. |
+| Docker Compose-configuraties | `docker-compose*.yml` bestanden | Runtimeconfiguratie kan leiden tot onbedoelde exposure van services of secrets. |
+| Integration-test credentials | Testaccounts zoals `admin:Admin123` | Testcredentials kunnen risico vormen als ze lekken of buiten testcontext worden hergebruikt. |
 
 ---
 
@@ -255,6 +267,12 @@ Voor dit threat model zijn vooral de volgende assetcategorieën relevant:
 | REST module → OpenMRS Core | Vertrouwd binnen applicatiecontext | Module vertrouwt op OpenMRS services en privileges. |
 | Applicatie → database | Vertrouwd intern pad | Foutieve autorisatie kan toch leiden tot ongewenste databaseacties. |
 | CI/CD → broncode/build | Gedeeltelijk vertrouwd | Pipeline moet beschermen tegen kwetsbare dependencies en ongewenste wijzigingen. |
+| GitHub repository → CI pipeline | Gedeeltelijk vertrouwd | Codewijzigingen, workflowconfiguratie en PR’s worden automatisch verwerkt door GitHub Actions. |
+| External Maven registry → Maven build | Niet volledig vertrouwd | Externe dependencies en plugins worden tijdens de build binnengehaald en kunnen kwetsbaar of kwaadaardig zijn. |
+| CI pipeline → build artifacts | Gedeeltelijk vertrouwd | Build artifacts worden automatisch gegenereerd en kunnen later als vertrouwde module worden gebruikt. |
+| Docker host → container runtime | Gedeeltelijk vertrouwd | Compose-configuraties bepalen welke services, poorten en environment variables beschikbaar zijn. |
+| Testconfiguratie → integration-test runtime | Gedeeltelijk vertrouwd | Testcredentials en test-endpoints worden gebruikt tijdens automatische integration tests. |
+| CodeQL-resultaten → securitybesluit | Gedeeltelijk vertrouwd | SAST-resultaten helpen bij beoordeling, maar dekken niet alle logische of runtime-kwetsbaarheden. |
 
 ### Aannames
 
@@ -281,10 +299,18 @@ De onderstaande tabel koppelt de threats uit dit threat model aan de risico’s 
 | L1-03 | T6 | Denial of Service op REST API door flooding of bulk requests | 3 | 3 | 9 | [04-risicomatrix.md](./04-risicomatrix.md), [docs/pentest/](../pentest/) |
 | L1-04 | T7 | Privilege escalatie via RBAC-fout of te brede privileges | 2 | 4 | 8 | [04-risicomatrix.md](./04-risicomatrix.md) |
 | L1-02 / L1-06 | T8 | Concept dictionary poisoning via ongeautoriseerde wijziging van medische terminologie | 1 | 4 | 4 | [04-risicomatrix.md](./04-risicomatrix.md) |
+| L1-09 | C3 / C4 | Manipulatie van CI/CD-pipeline of ontbreken van deployment approval | 3 | 4 | 12 | [04b-cicd-risico.md](./04b-cicd-risico.md) |
+| L1-10 | C2 | Supply-chain aanval via GitHub Action of dependency | 3 | 5 | 15 | [04b-cicd-risico.md](./04b-cicd-risico.md), SBOM/SCA |
+| L1-11 | C3 / C4 | Onveilige Docker- of deploymentconfiguratie kan services of deployments blootstellen | 3 | 4 | 12 | Attack surface analyse, security backlog |
+| L1-12 | C5 | False negative bij SAST/SCA waardoor kwetsbaarheid onopgemerkt blijft | 3 | 3 | 9 | Pentest, code review, DAST |
+| L1-13 | C1 | Secret leak in repository of CI/CD-pipeline | 4 | 5 | 20 | [04b-cicd-risico.md](./04b-cicd-risico.md), [04b-cicd-bow-tie.md](./04b-cicd-bow-tie.md) |
 
 T4 en T5 raken de REST module via het ontwikkelproces, maar worden inhoudelijk verder uitgewerkt in de CI/CD-risicoanalyse. In dit threat model zijn ze opgenomen als raakvlak, omdat pipelinefouten of kwetsbare dependencies uiteindelijk invloed kunnen hebben op de veiligheid van de REST module.
+Voor applicatierisico’s worden de T-nummers uit de algemene risicomatrix gebruikt. Voor CI/CD-gerelateerde risico’s worden de C-nummers uit de CI/CD-risicoanalyse gebruikt. Hierdoor blijven de verwijzingen consistent met `04-risicomatrix.md` en `04b-cicd-risico.md`.
 
 Het hoogste risico uit de risicomatrix is T1 — Ongeautoriseerde API-toegang met score 20. Dit risico wordt verder uitgewerkt in [05-bowtie.md](./05-bowtie.md).
+
+Het hoogste CI/CD-risico is C1 — Secret leak in repository of CI/CD-pipeline met score 20. Dit risico wordt verder uitgewerkt in [04b-cicd-bow-tie.md](./04b-cicd-bow-tie.md).
 
 ## 10. Selectie voor verdere validatie
 
@@ -297,6 +323,10 @@ Op basis van dit threat model worden de volgende risico’s meegenomen naar risi
 | L1-03 | Brute-force, scraping of bulk requests | Kan leiden tot bulk-extractie of beschikbaarheidsproblemen. | [04-risicomatrix.md](./04-risicomatrix.md), [docs/pentest/](../pentest/) |
 | L1-05 | Onvoldoende audit trail | Incidenten kunnen niet volledig gereconstrueerd worden. | [09-logging-gap-analyse.md](./09-logging-gap-analyse.md) |
 | L1-07 | Onveilige codewijziging | Kan autorisatiefouten introduceren in kritieke endpoints. | [06-security-backlog.md](./06-security-backlog.md), code review |
+| L1-09 | CI/CD pipeline manipulation | Komt overeen met C3/C4: wijziging pipelineconfiguratie of ontbrekende deployment approval. | [04b-cicd-risico.md](./04b-cicd-risico.md) |
+| L1-10 | Supply-chain attack via Maven dependencies | Komt overeen met C2: supply-chain aanval via GitHub Action of dependency. | [06-security-backlog.md](./06-security-backlog.md), SBOM/SCA |
+| L1-12 | False sense of security from CodeQL scanning | Komt overeen met C5: false negative bij SAST/SCA. | Pentest, code review, DAST |
+| L1-13 | Hardcoded integration-test credentials | Raakt C1: secret leak in repository of CI/CD-pipeline. | [04b-cicd-risico.md](./04b-cicd-risico.md), [04b-cicd-bow-tie.md](./04b-cicd-bow-tie.md) |
 
 ---
 
@@ -310,6 +340,11 @@ Op basis van dit threat model worden de volgende risico’s meegenomen naar risi
 | Onvoldoende audit trail | Immutable audit logging voor API-toegang | Detectief / correctief | A.8.15 |
 | Onveilige codewijziging | CodeQL/SAST, PR-review en security tests | Preventief | A.8.29 / A.8.32 |
 | Kwetsbare dependency | SCA, SBOM en patchbeleid | Preventief | A.8.8 |
+| CI/CD pipeline manipulation | Protected branches, PR-review, least-privilege workflow permissions en approval gates | Preventief | A.8.25 / A.8.32 |
+| Supply-chain attack via Maven dependencies | SCA, SBOM, dependency pinning en traceerbaar patchbeleid | Preventief | A.8.8 |
+| Docker misconfiguration | Gescheiden dev/test/prod-configuratie, minimale exposed ports en geen secrets in compose-bestanden | Preventief | A.8.9 / A.8.20 |
+| False sense of security from CodeQL scanning | CodeQL combineren met SCA, DAST, pentest en handmatige code review | Preventief / detectief | A.8.28 / A.8.29 |
+| Hardcoded integration-test credentials | Testcredentials alleen voor testcontext, geen productiehergebruik, geen secrets in logs of CI-output | Preventief | A.5.17 / A.8.5 |
 
 ---
 
@@ -324,6 +359,8 @@ Op basis van dit threat model worden de volgende risico’s meegenomen naar risi
 | Security backlog                | [06-security-backlog.md](./06-security-backlog.md) |
 | Logging gap-analyse             | [09-logging-gap-analyse.md](./09-logging-gap-analyse.md) |
 | Pentestdocumentatie             | [docs/pentest/](../pentest/) |
+| Attack surface analyse | [10-attack-surface.md](./10-attack-surface.md) |
+| CI/CD bow-tie analyse | [04b-cicd-bow-tie.md](./04b-cicd-bow-tie.md) |
 
 ---
 
@@ -333,4 +370,4 @@ Het threat model laat zien dat de grootste risico’s rond de OpenMRS REST Web S
 
 De Level 0 threats zijn afgeleid uit het C4-contextdiagram. De Level 1 threats zijn afgeleid uit het C4-containerdiagram en technisch onderbouwd met het componentdiagram.
 
-Het hoogste risico wordt uitgewerkt in [05-bowtie.md](./05-bowtie.md). De logging- en attack-surface onderdelen worden in Sprint 3 verder aangescherpt en verwerkt in een bijgewerkte versie van dit threat model.
+Het hoogste risico wordt uitgewerkt in [05-bowtie.md](./05-bowtie.md). De attack-surface onderdelen zijn in deze versie toegevoegd aan het threat model via aanvullende assets, trust boundaries, Level 1 threats en mitigaties voor CI/CD, Maven dependencies, Docker-configuratie, CodeQL en integration-test credentials.
