@@ -6,6 +6,9 @@
 
 Risicoscore: **20 (Kritiek)**
 
+Dit top event is geselecteerd op basis van de CI/CD-risicoanalyse.  
+Zie: **04b-cicd-risico.md**, waarin C1 als hoogste risico (score 20) is geïdentificeerd en als uitgangspunt dient voor deze bow-tie analyse.
+
 Dit risico heeft de hoogste score binnen de CI/CD-risicoanalyse en kan leiden tot ongeautoriseerde toegang tot build-, deployment- en productieomgevingen.
 
 ---
@@ -38,7 +41,6 @@ GEVOLGEN
 ├─ Manipulatie van build-artifacten
 └─ Mogelijk datalek
 ```
-
 ---
 
 ## Preventieve Maatregelen
