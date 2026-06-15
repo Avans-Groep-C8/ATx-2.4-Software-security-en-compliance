@@ -67,6 +67,7 @@ De implementatie is gebaseerd op de eerder uitgevoerde logging gap-analyse. In o
 | Gevoelige data kan onbedoeld in logs terechtkomen                           | Auditlogformaat bevat alleen metadata en tests controleren dat gevoelige termen niet standaard voorkomen | Gedeeltelijk opgelost |
 
 De status is bewust als “gedeeltelijk opgelost” aangeduid, omdat deze PR alleen patiëntgerelateerde write-acties implementeert en nog niet alle medische resources of read-acties dekt.
+Deze implementatie volgt uit de bevindingen in [`09-logging-gap-analyse.md`](./09-logging-gap-analyse.md).
 
 ---
 
@@ -279,13 +280,13 @@ Resultaat:
 
 Naast de unit tests kan de implementatie handmatig worden gevalideerd door patiëntgerelateerde acties via de REST API uit te voeren en de applicatielog te controleren op auditregels met logger `OPENMRS_REST_AUDIT`.
 
-| Actie                 | Verwachte auditregel                                      | Resultaat                     |
-| --------------------- | --------------------------------------------------------- | ----------------------------- |
-| Patient create        | `event=PATIENT_ACCESS outcome=SUCCESS action=CREATE`      | TODO: Geslaagd / Te valideren |
-| Patient update        | `event=PATIENT_ACCESS outcome=SUCCESS action=UPDATE`      | TODO: Geslaagd / Te valideren |
-| Patient delete/void   | `event=PATIENT_ACCESS outcome=SUCCESS action=DELETE_VOID` | TODO: Geslaagd / Te valideren |
-| Patient purge         | `event=PATIENT_ACCESS outcome=SUCCESS action=PURGE`       | TODO: Geslaagd / Te valideren |
-| Mislukte patiëntactie | `event=PATIENT_ACCESS outcome=FAILURE`                    | TODO: Geslaagd / Te valideren |
+| Actie | Verwachte auditregel | Resultaat |
+|---|---|---|
+| Patient create | `event=PATIENT_ACCESS outcome=SUCCESS action=CREATE` | Niet uitgevoerd in deze iteratie |
+| Patient update | `event=PATIENT_ACCESS outcome=SUCCESS action=UPDATE` | Niet uitgevoerd in deze iteratie |
+| Patient delete/void | `event=PATIENT_ACCESS outcome=SUCCESS action=DELETE_VOID` | Niet uitgevoerd in deze iteratie |
+| Patient purge | `event=PATIENT_ACCESS outcome=SUCCESS action=PURGE` | Niet uitgevoerd in deze iteratie |
+| Mislukte patiëntactie | `event=PATIENT_ACCESS outcome=FAILURE` | Niet uitgevoerd in deze iteratie |   
 
 Voor auditbewijs kunnen screenshots worden toegevoegd van:
 
@@ -293,6 +294,8 @@ Voor auditbewijs kunnen screenshots worden toegevoegd van:
 * de gegenereerde auditlogregel;
 * de Maven-testoutput;
 * de PR met codewijzigingen.
+
+Handmatige REST-validatie is niet uitgevoerd in deze iteratie. De werking is onderbouwd met unit tests, code review en de traceerbaarheid van de auditlog-aanroepen in `PatientResource1_8`. Een integratie- of REST-test is opgenomen als vervolgactie.
 
 ---
 
@@ -303,7 +306,7 @@ Voor auditbewijs kunnen screenshots worden toegevoegd van:
 | Codewijziging `AuditLogService`    | `omod-common/src/main/java/org/openmrs/module/webservices/rest/audit/AuditLogService.java`                           | Centrale auditlogger toegevoegd                                   |
 | Codewijziging `PatientResource1_8` | `omod-common/src/main/java/org/openmrs/module/webservices/rest/web/v1_0/resource/openmrs1_8/PatientResource1_8.java` | Auditlogging toegevoegd voor create, update, delete/void en purge |
 | Unit tests                         | `omod-common/src/test/java/org/openmrs/module/webservices/rest/audit/AuditLogServiceTest.java`                       | Test auditlogformaat, sanitization en privacy                     |
-| Maven testresultaat                | ![img.png](img.png)                                                                             | Toont dat de testset succesvol is uitgevoerd                      |
+| Maven testresultaat                | ![Maven testresultaat](./bewijs/logging-testresultaat.png)                                                           | Toont dat de testset succesvol is uitgevoerd                      |
 | PR                                 | TODO: PR-link toevoegen                                                                                              | Laat zien dat de wijziging reviewbaar is aangeboden               |
 | Commit                             | TODO: commit hash toevoegen                                                                                          | Maakt de wijziging herleidbaar                                    |
 | Handmatige validatie               | TODO: screenshot/logfragment toevoegen indien uitgevoerd                                                             | Toont dat REST-acties daadwerkelijk auditregels genereren         |
