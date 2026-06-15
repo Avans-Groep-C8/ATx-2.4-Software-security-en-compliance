@@ -1,4 +1,4 @@
-# 2.1 Asset-identificatie — OpenMRS REST Web Services Module
+# 2.1 Asset-identificatie - OpenMRS REST Web Services Module
 
 ## Kroonjuwelen (hoog risico)
 
