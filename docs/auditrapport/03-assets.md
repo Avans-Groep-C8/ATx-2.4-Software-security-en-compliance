@@ -17,6 +17,7 @@
 
 ## Overige assets (midden/laag risico)
 
+
 | ID   | Asset                                      | Categorie      | Risico | Waarom                                                                                                                                                                             |
 | ------- | ------------------------------------------ | -------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A-08 | Encounters (zorgcontactmomenten)           | Medisch        | Midden | Belangrijk voor de medische context en historie van patiënten, maar doorgaans minder kritisch dan directe behandelgegevens zoals medicatie of allergieën.                          |
@@ -24,7 +25,6 @@
 | A-12 | Concept Dictionary (medische terminologie) | Systeem        | Midden | Essentieel voor correcte interpretatie van medische gegevens. Manipulatie kan leiden tot inconsistenties of foutieve registraties.                                                 |
 | A-13 | Docker-omgeving & compose-bestanden        | Infrastructuur | Midden | Bevat configuratie van de applicatie-infrastructuur. Misconfiguratie of blootstelling kan leiden tot verstoring of indirecte compromittering van het systeem.                      |
 | A-14 | CI/CD-pipeline (GitHub Actions / Bamboo)   | Infrastructuur | Laag   | Beïnvloedt het ontwikkel- en deploymentproces, maar bevat doorgaans geen operationele patiëntgegevens. Compromittering kan wel invloed hebben op softwarekwaliteit en integriteit. |
-
 
 ## Classificatie (CIA-triad)
 

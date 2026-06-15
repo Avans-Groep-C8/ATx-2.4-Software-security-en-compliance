@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: read
+  # vereist om SARIF-resultaten naar GitHub Code Scanning te uploaden
+  security-events: write
 
 jobs:
   snyk:
@@ -59,6 +61,25 @@ jobs:
           output-file: snyk-sbom.json
           upload-artifact: false
           upload-release-assets: false
+
+      # SCA via Grype – scant de zojuist gegenereerde CycloneDX SBOM op CVE's
+      # en produceert SARIF zodat de bevindingen in GitHub Code Scanning komen.
+      - name: SCA – Grype scan SBOM (SARIF)
+        id: grype
+        uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6.5.1
+        with:
+          sbom: snyk-sbom.json
+          output-format: sarif
+          # bevindingen blokkeren de build niet; ze zijn zichtbaar in Code Scanning
+          fail-build: false
+          severity-cutoff: medium
+
+      - name: Upload Grype SARIF naar Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.grype.outputs.sarif }}
+          category: grype-sca
 
       # Valideer dat elk bestand geldig JSON is
       - name: Validate JSON output files
