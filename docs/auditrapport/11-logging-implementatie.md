@@ -302,15 +302,13 @@ Handmatige REST-validatie is niet uitgevoerd in deze iteratie. De werking is ond
 ## 13. Bewijsstukken
 
 | Bewijsstuk                         | Locatie / verwijzing                                                                                                 | Toelichting                                                       |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+|------------------------------------|----------------------------------------------------------------------------------------------------------------------| ----------------------------------------------------------------- |
 | Codewijziging `AuditLogService`    | `omod-common/src/main/java/org/openmrs/module/webservices/rest/audit/AuditLogService.java`                           | Centrale auditlogger toegevoegd                                   |
 | Codewijziging `PatientResource1_8` | `omod-common/src/main/java/org/openmrs/module/webservices/rest/web/v1_0/resource/openmrs1_8/PatientResource1_8.java` | Auditlogging toegevoegd voor create, update, delete/void en purge |
 | Unit tests                         | `omod-common/src/test/java/org/openmrs/module/webservices/rest/audit/AuditLogServiceTest.java`                       | Test auditlogformaat, sanitization en privacy                     |
 | Maven testresultaat                | ![Maven testresultaat](./bewijs/logging-testresultaat.png)                                                           | Toont dat de testset succesvol is uitgevoerd                      |
-| PR                                 | TODO: PR-link toevoegen                                                                                              | Laat zien dat de wijziging reviewbaar is aangeboden               |
-| Commit                             | TODO: commit hash toevoegen                                                                                          | Maakt de wijziging herleidbaar                                    |
-| Handmatige validatie               | TODO: screenshot/logfragment toevoegen indien uitgevoerd                                                             | Toont dat REST-acties daadwerkelijk auditregels genereren         |
-
+| PR                                 | https://github.com/Avans-Groep-C8/ATx-2.4-Software-security-en-compliance/pull/58                                    | Laat zien dat de wijziging reviewbaar is aangeboden               |
+| Handmatige validatie               | Niet uitgevoerd in deze iteratie                                                                                     | REST-validatie is opgenomen als vervolgactie; unit tests en code review vormen het bewijs voor deze PR |
 ---
 
 ## 14. Relatie met NEN-7510
