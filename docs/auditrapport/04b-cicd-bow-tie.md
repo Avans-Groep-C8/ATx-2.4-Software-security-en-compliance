@@ -130,7 +130,7 @@ Wanneer een secret-lek wordt vastgesteld:
 |------------|-------------------|
 | Pipeline | Secrets worden gebruikt tijdens build en deployment |
 | Secrets | Direct doelwit van het risico |
-| SAST | Detecteert hardcoded secrets in broncode |
+| SAST | Secret Scanning |
 | SCA | Beperkt risico op kwetsbare dependencies |
 | SBOM | Ondersteunt impactanalyse bij incidenten |
 | Deployment Approval | Verkleint kans op misbruik van gelekte credentials |
