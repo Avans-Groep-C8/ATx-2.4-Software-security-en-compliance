@@ -9,9 +9,13 @@
 
 ## 9.1 Inleiding
 
-NEN-7510 A.8.15 vereist dat zorginformatiesystemen gebeurtenissen loggen die nodig zijn voor detectie van beveiligingsincidenten, forensisch onderzoek en aantoonbaarheid van compliance. De norm schrijft voor dat logs minimaal bevatten: gebruikersidentiteit, type gebeurtenis, tijdstip, betrokken object/data, IP-adres van herkomst en resultaat (succes/mislukking).
+NEN-7510 A.8.15 vereist dat zorginformatiesystemen gebeurtenissen loggen die nodig zijn voor detectie van beveiligingsincidenten, forensisch onderzoek en aantoonbaarheid van compliance.
 
-Dit hoofdstuk analyseert welke events de `webservices.rest`-module feitelijk logt, koppelt dit aan het eerder vastgestelde aanvalsoppervlak (zie hoofdstuk 3), en bepaalt de gap ten opzichte van de normvereisten.
+Voor deze analyse wordt NEN-7510 A.8.15 als normkader gebruikt. De norm vereist logregistratie van gebruikersactiviteiten, uitzonderingen en informatiebeveiligingsgebeurtenissen. In de zorgcontext zijn vooral auditlogevents rond toegang tot persoonlijke gezondheidsinformatie, authenticatiepogingen, sessiebeëindiging, gebruikers- en rollenbeheer, export, verwijdering van registraties en toegang tot auditlogs relevant.
+
+Als toetsingscriterium hanteert dit document dat auditlogregels minimaal de 5 W’s bevatten: wie, wat, wanneer, waarop en met welk resultaat. Waar beschikbaar wordt ook het bron-IP vastgelegd.
+
+Dit hoofdstuk analyseert welke events de webservices.rest-module feitelijk logt, koppelt dit aan het eerder vastgestelde aanvalsoppervlak (zie hoofdstuk 3), en bepaalt de gap ten opzichte van het gehanteerde normkader.
 
 ---
 
@@ -98,14 +102,14 @@ De onderstaande tabel toont per relevant event of het gelogd wordt, welke gevoel
 
 | # | Event | Gelogd | Gevoelige data in log | Compliant NEN-7510 A.8.15 |
 |---|---|---|---|---|
-| E-01 | Geslaagde authenticatie (Basic Auth) | ⚠️ Ja, maar alleen op DEBUG | Gebruikersnaam in plaintext | ❌ Nee — DEBUG staat in productie uit; gebruikersnaam in log is risico |
-| E-02 | Mislukte authenticatiepoging | ⚠️ Ja, maar alleen op DEBUG | Stack trace, geen gebruikersnaam | ❌ Nee — niveau onjuist; geen gebruikersnaam, IP of tijdstip |
+| E-01 | Geslaagde authenticatie (Basic Auth) | ⚠️ Ja, maar alleen op DEBUG | Gebruikersnaam in plaintext | ❌ Nee — auditlog bevat niet consistent wie, wanneer en resultaat |
+| E-02 | Mislukte authenticatiepoging | ⚠️ Ja, maar alleen op DEBUG | Stack trace, geen gebruikersnaam | ❌ Nee — auditlog bevat niet de vereiste elementen wie, wanneer en resultaat |
 | E-03 | Brute-force detectie (herhaalde mislukte logins) | ❌ Niet gelogd | n.v.t. | ❌ Nee — geen teller of patroondetectie |
 | E-04 | Sessieverloop (timeout) | ❌ Niet gelogd | n.v.t. | ❌ Nee |
 | E-05 | Uitloggen (`DELETE /session`) | ❌ Niet gelogd | n.v.t. | ❌ Nee |
 | E-06 | Inloggen via session endpoint (`POST /session`) | ❌ Niet gelogd | n.v.t. | ❌ Nee |
-| E-07 | Autorisatiefout — 403 Forbidden | ⚠️ Ja, op INFO | Exception message (geen user/endpoint) | ❌ Nee — onvolledig; geen gebruikersidentiteit of resource |
-| E-08 | Ongeautoriseerd verzoek — 401 Unauthorized | ⚠️ Ja, op INFO | Exception message | ❌ Nee — onvolledig |
+| E-07 | Autorisatiefout — 403 Forbidden | ⚠️ Ja, op INFO | Exception message (geen user/endpoint) | ❌ Nee — auditlog bevat niet de vereiste elementen wie, waarop en resultaat |
+| E-08 | Ongeautoriseerd verzoek — 401 Unauthorized | ⚠️ Ja, op INFO | Exception message | ❌ Nee — auditlog bevat niet de vereiste elementen wie, waarop en resultaat |
 | E-09 | IP-blokkering (verboden IP-adres) | ❌ Niet gelogd | n.v.t. | ❌ Nee — 403 wordt gestuurd maar niet gelogd |
 | E-10 | Raadplegen patiëntrecord (`GET /patient/{uuid}`) | ❌ Niet gelogd | n.v.t. | ❌ Nee — geen audit trail van data-inzage |
 | E-11 | Aanmaken patiëntrecord (`POST /patient`) | ❌ Niet gelogd | n.v.t. | ❌ Nee |
@@ -145,36 +149,41 @@ Hoewel de logging minimaal is, bevat wat er wél gelogd wordt, aandachtspunten:
 
 De meest kritieke ontbrekende log-events zijn:
 
-**1. Mislukte authenticatiepogingen op INFO/WARN (E-02, E-03)**  
-Brute-force aanvallen op de REST API zijn volledig ondetecteerbaar. NEN-7510 A.8.15 vereist expliciet het loggen van mislukte toegangspogingen, inclusief tijdstip en IP-adres.
+1. Mislukte authenticatiepogingen op INFO/WARN (E-02, E-03)
 
-**2. Alle CRUD-operaties op medische data (E-10 t/m E-17)**  
-De `MainResourceController` verwerkt alle create/read/update/delete-operaties op patiëntrecords, observaties, orders en allergieën zonder één logstatement. Dit is de grootste gap: zonder deze logs is forensisch onderzoek na een datalek onmogelijk.
+Brute-force aanvallen op de REST API zijn volledig ondetecteerbaar. NEN-7510 A.8.15 vereist logging van relevante informatiebeveiligingsgebeurtenissen. Voor deze analyse worden mislukte authenticatiepogingen, inclusief tijdstip en indien beschikbaar bron-IP-adres, beschouwd als noodzakelijke auditlogevents.
 
-**3. Permanent verwijderen (purge) (E-14)**  
-De `?purge=true` parameter verwijdert data onomkeerbaar uit de database. Geen log van wie, wanneer en welke UUID gepurgd is, maakt dit de meest risicovolle niet-gelogde handeling.
+2. Alle CRUD-operaties op medische data (E-10 t/m E-17)
 
-**4. Het `/session/diag`-endpoint (E-18)**  
+De MainResourceController verwerkt alle create/read/update/delete-operaties op patiëntrecords, observaties, orders en allergieën zonder één logstatement. Dit is de grootste gap: zonder deze logs is forensisch onderzoek na een datalek onmogelijk.
+
+3. Permanent verwijderen (purge) (E-14)
+
+De ?purge=true parameter verwijdert data onomkeerbaar uit de database. Geen log van wie, wanneer en welke UUID gepurgd is, maakt dit de meest risicovolle niet-gelogde handeling.
+
+4. Het /session/diag-endpoint (E-18)
+
 Dit endpoint retourneert zonder autorisatiecontrole gevoelige gebruikersinformatie (rollen, privileges). Toegang hiertoe wordt niet gelogd, terwijl het potentieel bruikbaar is voor reconnaissance door een aanvaller.
 
-**5. IP-blokkering (E-09)**  
-Een geblokkeerd IP-adres krijgt een HTTP 403, maar dit event wordt nergens vastgelegd. Hierdoor blijft gerichte port-scanning of -misbruik van de allowed-IPs-functionaliteit onzichtbaar.
+5. IP-blokkering (E-09)
+
+Een geblokkeerd IP-adres krijgt een HTTP 403, maar dit event wordt nergens vastgelegd. Hierdoor blijft gerichte port-scanning of misbruik van de allowed-IPs-functionaliteit onzichtbaar.
 
 ---
 
 ## 9.7 Gap-samenvatting
 
-| Aspect | Huidige situatie | Gewenste situatie (NEN-7510 A.8.15) | Gap |
-|---|---|---|---|
-| Authenticatie logging | DEBUG-level; effectief uitgeschakeld in productie | INFO/WARN voor succes; WARN/ERROR voor mislukking, inclusief IP en tijdstip | Kritiek |
-| Autorisatiefouten | INFO zonder gebruikerscontext | WARN met gebruikersidentiteit, endpoint en IP | Hoog |
-| Dataraadpleging (reads) | Geen | Audit-log per GET op gevoelige resource (user, tijdstip, UUID) | Kritiek |
-| Datawijziging (writes) | Geen | Audit-log per POST/PUT (user, tijdstip, resource, UUID, oude/nieuwe waarden) | Kritiek |
-| Datadeletie (delete/purge) | Geen | Verplichte audit-log met reden, user en tijdstip | Kritiek |
-| Logniveau-configuratie | Twee frameworks, inconsistent | Één framework (SLF4J), geconfigureerd log-level per omgeving | Hoog |
-| Gevoelige data in logs | Stack traces kunnen PHI bevatten | Log-sanitisatie; nooit wachtwoorden of BSN in logs | Midden |
-| Centralisatie & retentie | Onbekend | Centrale log-opslag, minimaal 1 jaar bewaard (NEN-7510 vereiste) | Onbekend/risico |
-| Integriteit van logs | Geen maatregelen zichtbaar | Tamper-evident log-opslag (bijv. WORM of SIEM) | Hoog |
+| Aspect                     | Huidige situatie                                  | Gewenste situatie (NEN-7510 A.8.15 + auditcriteria)                                                                                                                          | Gap             |
+| -------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| Authenticatie logging      | DEBUG-level; effectief uitgeschakeld in productie | INFO/WARN voor succes; WARN/ERROR voor mislukking, inclusief tijdstip en indien beschikbaar bron-IP                                                                          | Kritiek         |
+| Autorisatiefouten          | INFO zonder gebruikerscontext                     | WARN met gebruikersidentiteit, endpoint, resultaat en indien beschikbaar bron-IP                                                                                             | Hoog            |
+| Dataraadpleging (reads)    | Geen                                              | Audit-log per GET op gevoelige resource met minimaal wie, wat, wanneer, waarop en resultaat                                                                                  | Kritiek         |
+| Datawijziging (writes)     | Geen                                              | Audit-log per POST/PUT met user, tijdstip, resource-type, resource-UUID, actie en resultaat. Geen medische inhoud, BSN, sessietokens of volledige oude/nieuwe waarden loggen | Kritiek         |
+| Datadeletie (delete/purge) | Geen                                              | Verplichte audit-log met gebruikersidentiteit, resource, tijdstip, actie en resultaat                                                                                        | Kritiek         |
+| Logniveau-configuratie     | Twee frameworks, inconsistent                     | Één framework (SLF4J), geconfigureerd log-level per omgeving                                                                                                                 | Hoog            |
+| Gevoelige data in logs     | Stack traces kunnen PHI bevatten                  | Log-sanitisatie; nooit wachtwoorden, BSN's of medische inhoud in logs                                                                                                        | Midden          |
+| Centralisatie & retentie   | Onbekend                                          | Centrale log-opslag met vastgelegde retentieperiode conform organisatiebeleid; het auditsysteem moet het bewaren van auditlogrecords ondersteunen                            | Onbekend/risico |
+| Integriteit van logs       | Geen maatregelen zichtbaar                        | Tamper-evident log-opslag (bijv. WORM of SIEM)                                                                                                                               | Hoog            |
 
 ---
 
@@ -182,21 +191,28 @@ Een geblokkeerd IP-adres krijgt een HTTP 403, maar dit event wordt nergens vastg
 
 Op basis van de gap-analyse worden de volgende maatregelen aanbevolen, geordend naar prioriteit:
 
-**Prioriteit 1 — Implementeer audit-logging in `MainResourceController`**  
-Voeg voor alle CRUD-operaties een audit-log toe op INFO-niveau met: gebruikersidentiteit (`Context.getAuthenticatedUser()`), HTTP-methode, resource, UUID, tijdstip en IP-adres. Overweeg een centrale `AuditLogger`-klasse om dit consistent te houden.
+### Prioriteit 1 — Implementeer audit-logging in `MainResourceController`
 
-**Prioriteit 2 — Verhoog logniveau authenticatiegebeurtenissen**  
-Wijzig in `AuthorizationFilter` het niveau van geslaagde authenticatie naar `INFO` en van mislukte authenticatie naar `WARN`, inclusief het IP-adres van de aanvrager (`request.getRemoteAddr()`).
+Voeg voor alle CRUD-operaties een audit-log toe op INFO-niveau met: gebruikersidentiteit (`Context.getAuthenticatedUser()`), HTTP-methode, resource-type, resource-UUID, actie, tijdstip, resultaat en indien beschikbaar het bron-IP-adres.
 
-**Prioriteit 3 — Log toegang tot `/session/diag` en verwijder of beveilig het endpoint**  
-Voeg minimaal een `WARN`-log toe bij elke aanroep van het diagnostisch endpoint, inclusief caller-IP en authenticatiestatus. Bij voorkeur wordt het endpoint verwijderd of voorzien van een sterke autorisatiecheck (zie ook bevinding in WS05).
+Log geen medische inhoud, BSN's, sessietokens of volledige oude/nieuwe waarden. Hiermee wordt aangesloten bij de principes van dataminimalisatie en Privacy by Design.
 
-**Prioriteit 4 — Één logging-framework**  
+Overweeg een centrale `AuditLogger`-klasse om audit-logging consistent, privacyvriendelijk en onderhoudbaar te implementeren.
+
+### Prioriteit 2 — Verhoog logniveau authenticatiegebeurtenissen
+
+Wijzig in `AuthorizationFilter` het niveau van geslaagde authenticatie naar `INFO` en van mislukte authenticatie naar `WARN`, inclusief het bron-IP-adres indien beschikbaar.
+
+### Prioriteit 3 — Log toegang tot `/session/diag` en verwijder of beveilig het endpoint
+
+Voeg minimaal een `WARN`-log toe bij elke aanroep van het diagnostisch endpoint, inclusief caller-IP indien beschikbaar en authenticatiestatus. Bij voorkeur wordt het endpoint verwijderd of voorzien van een sterke autorisatiecheck (zie ook bevinding in WS05).
+
+### Prioriteit 4 — Één logging-framework
+
 Consolideer naar SLF4J en verwijder de directe afhankelijkheid van Apache Commons Logging om consistente log-uitvoer en eenvoudigere configuratie te garanderen.
 
-**Prioriteit 5 — Log-sanitisatie voor stack traces**  
-Implementeer een `Sanitizer`-utility die before logging stack traces scant op patronen die PHI kunnen bevatten (UUID-formaten, namen) en deze maskeert of omschrijft.
+### Prioriteit 5 — Log-sanitisatie voor stack traces
+
+Implementeer een `Sanitizer`-utility die vóór logging stack traces scant op patronen die persoonlijke gezondheidsinformatie of andere gevoelige gegevens kunnen bevatten en deze maskeert of abstraheert.
 
 ---
-
-*Dit document is opgesteld als onderdeel van de NEN-7510 compliance-audit van de OpenMRS REST Web Services Module door Avans Hogeschool, studiegroep C8.*
