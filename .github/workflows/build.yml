@@ -42,6 +42,16 @@ jobs:
           path: '**/target/surefire-reports/*.xml'
           if-no-files-found: ignore
 
+      # Code coverage (JaCoCo): HTML + XML + CSV per module als CI-artefact.
+      # 'mvn verify' draait jacoco:report (rapport) en jacoco:check (gate op omod).
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-${{ github.run_id }}
+          path: '**/target/site/jacoco/**'
+          if-no-files-found: warn
+
       - name: Build dev artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
