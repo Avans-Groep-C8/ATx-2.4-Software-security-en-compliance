@@ -1,9 +1,8 @@
-@ -0,0 +1,339 @@
 # 10. Attack Surface Analyse – OpenMRS REST Module
 
 ## Doel
 
-Deze analyse identificeert alle relevante ingangen (attack surface) van de OpenMRS REST Web Services Module binnen de context van de huidige repository. De focus ligt op zowel de applicatie (REST API) als het CI/CD- en buildproces.
+Deze analyse identificeert en documenteert alle relevante ingangen (attack surface) van de OpenMRS REST Web Services Module binnen de context van de repository **ATx-2.4-Software-security-en-compliance**. De focus ligt zowel op de applicatie zelf als op de CI/CD-, build- en testomgeving die onderdeel uitmaken van de software supply chain.
 
 ---
 
@@ -11,330 +10,615 @@ Deze analyse identificeert alle relevante ingangen (attack surface) van de OpenM
 
 ## In scope
 
-- REST API van OpenMRS
-- GitHub Actions CI/CD workflows
-- CodeQL security scanning pipeline
-- Maven buildproces
-- Docker build & deployment configuraties
-- Integration tests
-- Artifact generatie
+* OpenMRS REST API
+* Authenticatie en autorisatie
+* GitHub Actions CI/CD workflows
+* CodeQL security scanning
+* Maven buildproces
+* Docker configuraties
+* Integration tests
+* Build artifacts
 
 ## Out of scope
 
-- Onderliggende infrastructuur (cloud/hosting)
-- Externe systemen zonder directe integratie
-- OpenMRS core buiten deze module
+* Onderliggende cloud- of hostinginfrastructuur
+* OpenMRS Core buiten deze module
+* Externe systemen zonder directe koppeling met de REST-module
 
 ---
 
-# 2. Overzicht van Attack Surface
+# 2. Onderzoeksbasis
 
-## 2.1 REST API (primaire ingang)
+Deze analyse is gebaseerd op de volgende repository-onderdelen.
 
-De module exposeert endpoints via:
+| Onderdeel                     | Locatie                        |
+| ----------------------------- | ------------------------------ |
+| GitHub Actions Build Pipeline | `.github/workflows/build.yml`  |
+| CodeQL Security Scan          | `.github/workflows/codeql.yml` |
+| Maven configuratie            | `pom.xml`                      |
+| Docker configuratie           | `docker-compose.yml`           |
+| Development omgeving          | `docker-compose.dev.yml`       |
+| Testomgeving                  | `docker-compose.test.yml`      |
+| Productieomgeving             | `docker-compose.prod.yml`      |
+| Integration tests             | `integration-tests/`           |
+| OpenMRS REST module           | `omod/`, `omod-common/`        |
 
-```
+Daarnaast is gebruikgemaakt van de projectdocumentatie en de README van de OpenMRS REST Web Services Module.
+
+---
+
+# 3. Overzicht Attack Surface
+
+## 3.1 REST API
+
+De primaire ingang van de module bestaat uit de REST API:
+
+```text
 /ws/rest/v1/*
 ```
 
-Voorbeelden:
+Belangrijke resources:
 
-- /patient
-- /encounter
-- /obs
-- /order
-- /allergy
-- /concept
+```text
+/ws/rest/v1/patient
+/ws/rest/v1/person
+/ws/rest/v1/encounter
+/ws/rest/v1/obs
+/ws/rest/v1/order
+/ws/rest/v1/allergy
+/ws/rest/v1/concept
+```
 
-### Risico’s
+### Endpoint-overzicht
 
-- Ongeautoriseerde toegang tot medische data
-- Manipulatie van patiëntinformatie
-- Data-exfiltratie via query parameters
-- Overexposure van gevoelige data
+| Endpoint                  | Methode    | Gegevens            | Vereiste rechten     | Risico   |
+| ------------------------- | ---------- | ------------------- | -------------------- | -------- |
+| `/ws/rest/v1/patient`     | GET        | Patiëntgegevens     | Get Patients         | Hoog     |
+| `/ws/rest/v1/patient`     | POST       | Nieuwe patiënt      | Add Patients         | Hoog     |
+| `/ws/rest/v1/obs`         | GET / POST | Observaties         | View/Add Observations| Hoog     |
+| `/ws/rest/v1/order`       | GET / POST | Medische orders     | Manage Orders        | Kritiek  |
+| `/ws/rest/v1/allergy`     | GET / POST | Allergieën          | Manage Allergies     | Kritiek  |
+| `/ws/rest/v1/encounter`   | GET / POST | Klinische ontmoeten | View/Add Encounters  | Hoog     |
+| `/ws/rest/v1/concept`     | GET        | Medische concepten  | View Concepts        | Laag     |
+
+### Dataflow
+
+```text
+Client (HTTPS)
+     ↓
+REST API /ws/rest/v1/*
+     ↓
+OpenMRS Core (service-laag)
+     ↓
+MySQL / MariaDB
+```
+
+### Mogelijke risico's
+
+* Ongeautoriseerde toegang tot patiëntgegevens
+* Onvoldoende autorisatiecontroles
+* Excessive data exposure
+* Manipulatie van medische gegevens
+* Misbruik van queryparameters
 
 ---
 
-## 2.2 Authenticatie & Autorisatie
+## 3.2 Authenticatie en Autorisatie
 
-Mechanismen:
+De REST-module ondersteunt:
 
-- Session-based authentication
-- Basic Authentication
-- Role-Based Access Control (RBAC)
+* Session Authentication
+* Basic Authentication
+* Role Based Access Control (RBAC)
 
-### Risico’s
+### Mogelijke risico's
 
-- Session hijacking
-- Credential stuffing
-- Onjuiste RBAC-configuratie
-- Privilege escalation
+* Session hijacking
+* Credential stuffing
+* Privilege escalation
+* Onjuiste RBAC-configuratie
 
 ---
 
-## 2.3 CI/CD Pipeline (GitHub Actions)
+## 3.3 GitHub Actions CI/CD Pipeline
 
-### Build workflow
+De repository bevat een buildworkflow:
+
+```yaml
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+```
+
+Belangrijke buildstappen:
+
+* Checkout repository
+* Java 8 setup
+* Maven verify
+* Upload test reports
+* Build OMOD artifact
+* Upload artifact
+
+### Attack Surface
+
+De CI-pipeline verwerkt automatisch code die naar de repository wordt gepusht of via pull requests wordt aangeboden.
+
+### Mogelijke risico's
+
+* Build-manipulatie via pull requests
+* Supply-chain aanvallen
+* Kwaadaardige dependency introductie
+* Artifact manipulatie
+* Workflow misbruik
+
+---
+
+## 3.4 CodeQL Security Scanning
+
+De repository bevat een geautomatiseerde CodeQL workflow.
+
+De workflow analyseert:
+
+* Java/Kotlin code
+* GitHub Actions workflows
 
 Triggers:
 
-- push naar `main`
-- pull_request naar `main`
-- manual workflow_dispatch
+* Push naar main
+* Pull requests naar main
+* Wekelijkse geplande scan
 
-Belangrijke stappen:
+### Attack Surface
 
-- Maven build (`mvn clean verify`)
-- Unit + integration tests
-- Artifact upload (OMOD module)
-- Java 8 build environment
+Security tooling vormt zelf een vertrouwenscomponent binnen de ontwikkelstraat.
 
-### High-risk aspecten
+### Mogelijke risico's
 
-- Build draait automatisch op elke push
-- Artifacts worden automatisch gegenereerd
-- CI heeft toegang tot repository context
-- Geen expliciete deployment approval gate
-
-### Attack surface
-
-- Injectie in build via pull request
-- Manipulatie van build artifacts
-- Misbruik van workflow permissions
-- Dependency poisoning via Maven
+* False negatives
+* Onvolledige detectie van kwetsbaarheden
+* Verkeerde interpretatie van scanresultaten
 
 ---
 
-## 2.4 CodeQL Security Pipeline
+## 3.5 Docker Configuraties
 
-Workflow:
+Aanwezige configuraties:
 
-- Analyse van Java/Kotlin code
-- Analyse van GitHub Actions workflows
-- Scheduled scans (cron job)
-- Security events write permissions
-
-### High-risk aspecten
-
-- Automatische security scanning zonder blocking gate
-- False negatives in CodeQL
-- Vertrouwen op default query sets
-
-### Attack surface
-
-- Onopgemerkte kwetsbaarheden in PR’s
-- Supply chain vulnerabilities in dependencies
-- Misconfiguratie van security scanning
-
----
-
-## 2.5 Docker / Container Attack Surface
-
-Bestanden:
-
-- docker-compose.yml
-- docker-compose.dev.yml
-- docker-compose.test.yml
-- docker-compose.prod.yml
-
-### Ingangen
-
-- Exposed ports (REST API)
-- Environment variables (mogelijke secrets)
-- Container-to-container communicatie
-
-### Risico’s
-
-- Onbedoelde public exposure van services
-- Hardcoded credentials in env files
-- Privilege escalation binnen containers
-- Misconfiguratie van production environment
-
----
-
-## 2.6 Maven Build & Dependencies
-
-Build:
-
+```text
+docker-compose.yml
+docker-compose.dev.yml
+docker-compose.test.yml
+docker-compose.prod.yml
 ```
+
+### Attack Surface
+
+* Exposed netwerkpoorten
+* Environment variables
+* Containercommunicatie
+* Volumes en configuratiebestanden
+
+### Mogelijke risico's
+
+* Onbedoelde blootstelling van services
+* Hardcoded configuraties
+* Verkeerd geconfigureerde productieomgevingen
+
+Op basis van de beschikbare informatie is niet vastgesteld of deze risico's daadwerkelijk aanwezig zijn.
+
+---
+
+## 3.6 Maven Dependencies
+
+De build maakt gebruik van Maven:
+
+```text
 mvn clean verify
 ```
 
-### Attack surface
+### Attack Surface
 
-- External Maven dependencies
-- Transitive dependencies
-- Plugin execution tijdens build
+* Directe dependencies
+* Transitive dependencies
+* Maven plugins
 
-### Risico’s
+### Mogelijke risico's
 
-- Dependency confusion attack
-- Malicious transitive dependency
-- Outdated libraries met CVE’s
+* Supply-chain aanvallen
+* Dependency confusion
+* Verouderde libraries met bekende kwetsbaarheden
+
+Deze risico's dienen verder onderzocht te worden via SCA en SBOM-analyse.
 
 ---
 
-## 2.7 Integration Tests
+## 3.7 Integration Tests
 
-Uitvoering:
+De README bevat het volgende voorbeeld:
 
-```
-mvn verify -Pintegration-tests
-```
-
-Test endpoint:
-
-```
-http://admin:Admin123@localhost:8080/openmrs
+```text
+mvn clean verify -Pintegration-tests -DtestUrl=http://admin:Admin123@localhost:8080/openmrs
 ```
 
-### Attack surface
+### Vastgestelde bevinding
 
-- Hardcoded test credentials
-- Test environment exposure
-- Automatische API calls met admin rechten
+Binnen de documentatie wordt een testaccount gebruikt:
 
-### Risico’s
+```text
+admin:Admin123
+```
 
-- Credential leakage
-- Herbruikbare testaccounts in productie-achtige context
-- Onveilige testconfiguratie
+### Risico
 
----
+De credentials lijken bedoeld voor een lokale testomgeving. Het risico ontstaat wanneer deze waarden in logs, documentatie, CI-output of productieachtige omgevingen worden hergebruikt.
 
-# 3. High-Risk Ingangen
+### Aanbevelingen
 
-## HR1 – REST API (/ws/rest/v1/*)
-
-- Directe toegang tot patiëntdata
-- CRUD operaties op medische gegevens
+* Testaccounts gescheiden houden van productieaccounts
+* Geen productiecredentials gebruiken in testomgevingen
+* Secrets via GitHub Secrets of een secrets manager beheren
+* Credentials niet loggen
 
 ---
 
-## HR2 – CI/CD GitHub Actions
+## 3.8 Module Uploads (.omod)
 
-- Automatische build en test uitvoering
-- Mogelijkheid tot supply chain injectie
+OpenMRS ondersteunt de installatie van modules via `.omod`-bestanden. Via de beheersinterface kunnen nieuwe modules worden geüpload en geactiveerd, waarbij de module als executable code binnen de applicatie wordt uitgevoerd.
 
----
+### Attack Surface
 
-## HR3 – CodeQL workflow
+* Upload van nieuwe `.omod`-modules via de beheersinterface
+* Installatie van externe of niet-geverifieerde modules
+* Mogelijke privilege escalation via kwaadaardige extensies
 
-- Security scanning afhankelijk van configuratie
-- Mogelijke false negatives
+### Mogelijke risico's
 
----
+* Upload van kwaadaardige modules door een aanvaller met beheertoegang
+* Supply-chain aanvallen via gecompromitteerde module-bronnen
+* Remote code execution via malafide extensies
 
-## HR4 – Docker Compose configuraties
-
-- Mogelijke blootstelling van services
-- Environment-based secrets
-
----
-
-## HR5 – Maven dependency chain
-
-- Externe library risico’s
-- Transitive dependency attacks
+**Status: Niet onderzocht**
 
 ---
 
-## HR6 – Integration test credentials
+## 3.9 Configuratie en Secrets
 
-- Hardcoded admin credentials
-- Herbruikbare login context
+OpenMRS maakt gebruik van meerdere configuratiebronnen voor het opslaan van gevoelige gegevens zoals databasewachtwoorden en API-sleutels.
+
+### Bronnen
+
+* `runtime.properties` – bevat databaseverbindingsgegevens en sleutels
+* Environment variables – worden meegegeven aan Docker-containers
+* GitHub Secrets – gebruikt binnen CI/CD-workflows
+
+### Mogelijke risico's
+
+* Hardcoded secrets in configuratiebestanden of Docker Compose
+* Secret leakage via logbestanden of CI-output
+* Onvoldoende secret rotation
+* Ongeautoriseerde toegang tot `runtime.properties`
+
+**Status: Niet onderzocht**
 
 ---
 
-# 4. Trust Boundaries
+# 4. Attack Surface Diagram
 
-## TB1 – External Client → REST API
+```text
+          Internet
+              |
+           HTTPS
+              |
+   +----------------------+
+   |  OpenMRS REST API    |
+   |  /ws/rest/v1/*       |
+   +----------------------+
+              |
+           JDBC
+              |
+   +----------------------+
+   |   MySQL / MariaDB    |
+   +----------------------+
 
-Internet input wordt volledig ontrusted beschouwd.
+
+   Developer
+       |
+    Git Push / Pull Request
+       |
+   +----------------------+
+   |   GitHub Repository  |
+   +----------------------+
+       |
+    GitHub Actions
+       |
+   +----------------------+
+   |   Build Pipeline     |
+   +----------------------+
+       |
+    OMOD Artifact
+       |
+    Deployment
+```
 
 ---
 
-## TB2 – GitHub Repository → CI Pipeline
+# 5. Vastgestelde Bevindingen en Risico's
 
-Code in repository wordt automatisch vertrouwd door CI.
+| Onderdeel                  | Risico                                   | Status          | Bewijs                                          |
+| -------------------------- | ---------------------------------------- | --------------- | ----------------------------------------------- |
+| Integration tests          | Hardcoded testcredentials                | Vastgesteld     | README voorbeeld met admin:Admin123             |
+| GitHub Actions build       | Automatische builds op push en PR        | Vastgesteld     | build.yml                                       |
+| Artifact generatie         | Automatische OMOD artifact upload        | Vastgesteld     | build.yml                                       |
+| CodeQL scanning            | Geautomatiseerde security scan aanwezig  | Vastgesteld     | codeql.yml                                      |
+| Maven dependencies         | Kwetsbare transitive dependencies        | Mogelijk risico | Verdere SCA-analyse nodig                       |
+| GitHub Actions permissions | Te ruime rechten                         | Niet onderzocht | Workflow permissions niet volledig beoordeeld   |
+| Docker configuraties       | Blootgestelde services                   | Niet onderzocht | Docker configuraties niet volledig geanalyseerd |
+| Supply-chain risico        | Kwaadaardige dependencies                | Mogelijk risico | Maven ecosystem                                 |
+| CodeQL false negatives     | Niet alle kwetsbaarheden worden gevonden | Mogelijk risico | Bekende beperking van SAST-tools                |
+| Module uploads (.omod)     | Remote code execution via extensies      | Niet onderzocht | OpenMRS modulebeheer                            |
+| Secrets / runtime.properties | Hardcoded of gelekte credentials       | Niet onderzocht | Configuratiebronnen niet volledig beoordeeld    |
+| REST API → Database        | SQL-injectie, onvoldoende DB-rechten     | Mogelijk risico | Dataflow niet volledig geanalyseerd             |
+
+---
+
+# 6. High-Risk Ingangen
+
+## HR1 – REST API
+
+Waarom kritisch:
+
+* Toegang tot patiëntgegevens
+* Toegang tot observaties
+* Toegang tot medische orders
+
+CIA:
+
+* Vertrouwelijkheid
+* Integriteit
+
+---
+
+## HR2 – Authenticatie
+
+Waarom kritisch:
+
+* Toegangspoort tot alle API-functionaliteit
+
+CIA:
+
+* Vertrouwelijkheid
+* Integriteit
+* Beschikbaarheid
+
+---
+
+## HR3 – GitHub Actions CI/CD
+
+Waarom kritisch:
+
+* Automatische verwerking van codewijzigingen
+* Artifact generatie
+
+CIA:
+
+* Integriteit
+* Beschikbaarheid
+
+---
+
+## HR4 – Maven Dependency Chain
+
+Waarom kritisch:
+
+* Vertrouwen op externe softwarecomponenten
+
+CIA:
+
+* Integriteit
+
+---
+
+## HR5 – Docker Deployment Configuraties
+
+Waarom kritisch:
+
+* Productie- en testomgevingen worden geconfigureerd via Docker
+
+CIA:
+
+* Vertrouwelijkheid
+* Beschikbaarheid
+
+---
+
+## HR6 – Module Uploads (.omod)
+
+Waarom kritisch:
+
+* Directe uitvoering van externe code binnen de applicatie
+* Vereist beheertoegang, maar misbruik leidt tot volledige systeemcompromittatie
+
+CIA:
+
+* Vertrouwelijkheid
+* Integriteit
+* Beschikbaarheid
+
+---
+
+# 7. Trust Boundaries
+
+## TB1 – Externe Client → REST API
+
+```text
+Internet
+ ↓
+REST API
+```
+
+Alle input afkomstig van externe gebruikers wordt beschouwd als onbetrouwbaar.
+
+---
+
+## TB2 – Repository → CI Pipeline
+
+```text
+Developer
+ ↓
+GitHub Repository
+ ↓
+GitHub Actions
+```
+
+Code die naar de repository wordt gepusht wordt automatisch verwerkt door de CI-pipeline.
+
+Niet onderzocht is of aanvullende goedkeuringsmechanismen zoals verplichte reviews of deployment approvals aanwezig zijn.
 
 ---
 
 ## TB3 – CI Pipeline → Build Artifacts
 
-Artifacts worden automatisch gegenereerd en vertrouwd.
+```text
+GitHub Actions
+ ↓
+OMOD Artifact
+```
+
+Artifacts worden automatisch gegenereerd en vervolgens vertrouwd door volgende processtappen.
 
 ---
 
-## TB4 – CodeQL → Security Decision Layer
+## TB4 – CodeQL → Security Besluitvorming
 
-Security scan resultaten worden gebruikt als “vertrouwensindicator”.
+```text
+CodeQL
+ ↓
+Security Resultaten
+ ↓
+Ontwikkelteam
+```
 
----
-
-## TB5 – Docker Host → Container Runtime
-
-Container configuraties bepalen runtime gedrag.
-
----
-
-# 5. Impliciet Vertrouwen
-
-## IV1 – Vertrouwen in pull requests
-
-Aangenomen dat PR’s geen kwaadaardige code bevatten.
+Er wordt vertrouwd op de juistheid van scanresultaten.
 
 ---
 
-## IV2 – Vertrouwen in GitHub Actions
+## TB5 – Docker Host → Containers
 
-Aangenomen dat actions (v4) veilig en niet gecompromitteerd zijn.
+```text
+Docker Host
+ ↓
+OpenMRS Containers
+```
 
----
-
-## IV3 – Vertrouwen in Maven dependencies
-
-Aangenomen dat externe libraries betrouwbaar zijn.
-
----
-
-## IV4 – Vertrouwen in CodeQL resultaten
-
-Aangenomen dat security scanning volledig is.
+Containerconfiguraties bepalen runtime gedrag en netwerktoegang.
 
 ---
 
-## IV5 – Vertrouwen in Docker configuraties
+## TB6 – REST API → Database
 
-Aangenomen dat production configs correct en veilig zijn.
+```text
+REST API
+ ↓
+MySQL / MariaDB
+```
 
----
+REST-resources communiceren direct met de onderliggende database. Onjuiste queryopbouw of onvoldoende databaserechten vormen een risico.
 
-# 6. Update Threat Model
+### Mogelijke risico's
 
-Op basis van deze attack surface worden de volgende dreigingen expliciet toegevoegd:
-
-| ID | Dreiging |
-|----|-----------|
-| T12 | CI/CD pipeline manipulation via GitHub Actions |
-| T13 | Supply chain attack via Maven dependencies |
-| T14 | Code injection via pull request builds |
-| T15 | Docker misconfiguration leading to exposure |
-| T16 | False sense of security from CodeQL scanning |
+* SQL-injectie
+* Onvoldoende database-rechten per gebruikersrol
+* Directe blootstelling van patiëntgegevens bij databaselekken
 
 ---
 
-# 7. Conclusie
+# 8. Impliciet Vertrouwen
 
-De attack surface van deze repository bestaat uit meerdere lagen:
+## IV1 – Pull Requests
 
-1. REST API (hoogste risico)
-2. CI/CD pipeline (GitHub Actions)
-3. Code security scanning (CodeQL)
-4. Docker deployment configuraties
-5. Dependency management (Maven)
-6. Testomgeving met elevated credentials
+Aangenomen wordt dat aangeleverde code geen kwaadaardige functionaliteit bevat.
 
-De combinatie van automatische builds, dependency management en REST exposure maakt dit systeem gevoelig voor supply chain en configuration-based attacks.
+---
 
-Het CI/CD-systeem vormt een kritieke uitbreiding van de attack surface naast de applicatie zelf.
+## IV2 – GitHub Actions
+
+Aangenomen wordt dat gebruikte GitHub Actions veilig zijn en niet gecompromitteerd zijn.
+
+---
+
+## IV3 – Maven Dependencies
+
+Aangenomen wordt dat externe libraries betrouwbaar zijn.
+
+---
+
+## IV4 – CodeQL Resultaten
+
+Aangenomen wordt dat kwetsbaarheden correct worden gedetecteerd.
+
+---
+
+## IV5 – Docker Configuraties
+
+Aangenomen wordt dat configuraties veilig zijn voor productiegebruik.
+
+---
+
+## IV6 – Module-integriteit (.omod)
+
+Aangenomen wordt dat geïnstalleerde modules afkomstig zijn van betrouwbare bronnen en geen kwaadaardige code bevatten.
+
+---
+
+## IV7 – Configuratie en Secrets
+
+Aangenomen wordt dat `runtime.properties` en environment variables geen gevoelige gegevens bevatten die onbedoeld worden blootgesteld.
+
+---
+
+# 9. Update Threat Model
+
+Op basis van deze analyse worden de volgende dreigingen toegevoegd aan het bestaande threat model.
+
+| ID  | Dreiging                                   |
+| --- | ------------------------------------------ |
+| T12 | Manipulatie van GitHub Actions workflows   |
+| T13 | Supply-chain aanval via Maven dependencies |
+| T14 | Kwaadaardige code via pull requests        |
+| T15 | Docker misconfiguratie                     |
+| T16 | Onvoldoende detectie door security tooling |
+| T17 | Remote code execution via .omod upload     |
+| T18 | Secret leakage via runtime.properties      |
+| T19 | SQL-injectie via REST API naar database    |
+
+---
+
+# 10. Relatie met NEN 7510 en ISO 27001
+
+| Onderwerp                    | Relevantie                           |
+| ---------------------------- | ------------------------------------ |
+| Authenticatie en autorisatie | Toegangsbeheer                       |
+| Logging en monitoring        | Detectie en auditing                 |
+| Secure software development  | Veilige ontwikkelprocessen           |
+| Vulnerability management     | Kwetsbaarhedenbeheer                 |
+| Dependency management        | Supply-chain security                |
+| Secrets management           | Bescherming van toegangsgegevens     |
+| Security testing             | Continue verificatie van beveiliging |
+| Module-integriteit           | Beheersing van softwarecomponenten   |
+
+De geïdentificeerde attack surface raakt meerdere onderdelen van NEN 7510 en ISO 27001 die relevant zijn voor veilige verwerking van medische gegevens.
+
+---
+
+# 11. Conclusie
+
+De belangrijkste attack surfaces binnen deze repository zijn de OpenMRS REST API, de GitHub Actions CI/CD-pipeline, de Maven dependency chain en de Docker-gebaseerde deploymentconfiguraties.
+
+Naast vastgestelde bevindingen, zoals automatische builds, artifact generatie en het gebruik van testcredentials, zijn ook meerdere potentiële risico's geïdentificeerd. Aanvullend zijn drie onderdelen toegevoegd die eerder ontbraken: de dataflow van de REST API naar de onderliggende database (TB6), de mogelijkheid tot het uploaden van `.omod`-modules als attack surface (3.8), en het beheer van configuratie en secrets via `runtime.properties` en environment variables (3.9).
+
+Deze aanvullingen vereisen aanvullende analyse, bijvoorbeeld via SCA, SBOM-generatie en een diepgaand onderzoek van Docker-, workflow- en secrets-configuraties.
+
+Door onderscheid te maken tussen vastgestelde bevindingen, mogelijke risico's en niet-onderzochte onderdelen ontstaat een beter onderbouwde, reproduceerbare en auditwaardige attack-surface-analyse.
