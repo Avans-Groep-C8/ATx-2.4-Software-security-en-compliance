@@ -39,6 +39,7 @@ import org.openmrs.module.webservices.rest.web.response.ConversionException;
 import org.openmrs.module.webservices.rest.web.response.IllegalRequestException;
 import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
 import org.openmrs.module.webservices.rest.web.response.ResponseException;
+import org.openmrs.module.webservices.rest.audit.AuditLogService;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -51,7 +52,9 @@ import java.util.Set;
  */
 @Resource(name = RestConstants.VERSION_1 + "/patient", supportedClass = Patient.class, supportedOpenmrsVersions = { "1.8.*" })
 public class PatientResource1_8 extends DataDelegatingCrudResource<Patient> {
-	
+
+	private final AuditLogService auditLogService = new AuditLogService();
+
 	public PatientResource1_8() {
 	}
 	
@@ -242,9 +245,24 @@ public class PatientResource1_8 extends DataDelegatingCrudResource<Patient> {
 	 */
 	@Override
 	public Object create(SimpleObject propertiesToCreate, RequestContext context) throws ResponseException {
-		Patient delegate = getPatient(propertiesToCreate);
-		delegate = save(delegate);
-		return ConversionUtil.convertToRepresentation(delegate, Representation.DEFAULT);
+		Patient delegate = null;
+
+		try {
+			delegate = getPatient(propertiesToCreate);
+			delegate = save(delegate);
+
+			auditLogService.logPatientAccess(delegate.getUuid(), "CREATE", true);
+
+			return ConversionUtil.convertToRepresentation(delegate, Representation.DEFAULT);
+		}
+		catch (ResponseException ex) {
+			auditLogService.logPatientAccess(delegate != null ? delegate.getUuid() : "-", "CREATE", false);
+			throw ex;
+		}
+		catch (RuntimeException ex) {
+			auditLogService.logPatientAccess(delegate != null ? delegate.getUuid() : "-", "CREATE", false);
+			throw ex;
+		}
 	}
 	
 	public Patient getPatient(SimpleObject propertiesToCreate) {
@@ -295,11 +313,21 @@ public class PatientResource1_8 extends DataDelegatingCrudResource<Patient> {
 	 */
 	@Override
 	public void delete(Patient patient, String reason, RequestContext context) throws ResponseException {
-		if (patient.isVoided()) {
-			// DELETE is idempotent, so we return success here
-			return;
+		String patientUuid = patient != null ? patient.getUuid() : "-";
+
+		try {
+			if (patient.isVoided()) {
+				auditLogService.logPatientAccess(patientUuid, "DELETE_ALREADY_VOIDED", true);
+				return;
+			}
+
+			Context.getPatientService().voidPatient(patient, reason);
+			auditLogService.logPatientAccess(patientUuid, "DELETE_VOID", true);
 		}
-		Context.getPatientService().voidPatient(patient, reason);
+		catch (RuntimeException ex) {
+			auditLogService.logPatientAccess(patientUuid, "DELETE_VOID", false);
+			throw ex;
+		}
 	}
 	
 	/**
@@ -320,11 +348,21 @@ public class PatientResource1_8 extends DataDelegatingCrudResource<Patient> {
 	 */
 	@Override
 	public void purge(Patient patient, RequestContext context) throws ResponseException {
-		if (patient == null) {
-			// DELETE is idempotent, so we return success here
-			return;
+		String patientUuid = patient != null ? patient.getUuid() : "-";
+
+		try {
+			if (patient == null) {
+				auditLogService.logPatientAccess(patientUuid, "PURGE_NOT_FOUND", true);
+				return;
+			}
+
+			Context.getPatientService().purgePatient(patient);
+			auditLogService.logPatientAccess(patientUuid, "PURGE", true);
 		}
-		Context.getPatientService().purgePatient(patient);
+		catch (RuntimeException ex) {
+			auditLogService.logPatientAccess(patientUuid, "PURGE", false);
+			throw ex;
+		}
 	}
 	
 	/**
@@ -368,15 +406,32 @@ public class PatientResource1_8 extends DataDelegatingCrudResource<Patient> {
 		
 		return patient.getPatientIdentifier().getIdentifier() + " - " + patient.getPersonName().getFullName();
 	}
-	
+
 	@Override
 	public Object update(String uuid, SimpleObject propertiesToUpdate, RequestContext context) throws ResponseException {
-		if (propertiesToUpdate.get("person") == null) {
-			return super.update(uuid, propertiesToUpdate, context);
+		try {
+			Object result;
+
+			if (propertiesToUpdate.get("person") == null) {
+				result = super.update(uuid, propertiesToUpdate, context);
+			} else {
+				Patient patient = getPatientForUpdate(uuid, propertiesToUpdate);
+				patient = save(patient);
+				result = ConversionUtil.convertToRepresentation(patient, Representation.DEFAULT);
+			}
+
+			auditLogService.logPatientAccess(uuid, "UPDATE", true);
+
+			return result;
 		}
-		Patient patient = getPatientForUpdate(uuid, propertiesToUpdate);
-		patient = save(patient);
-		return ConversionUtil.convertToRepresentation(patient, Representation.DEFAULT);
+		catch (ResponseException ex) {
+			auditLogService.logPatientAccess(uuid, "UPDATE", false);
+			throw ex;
+		}
+		catch (RuntimeException ex) {
+			auditLogService.logPatientAccess(uuid, "UPDATE", false);
+			throw ex;
+		}
 	}
 	
 	public Patient getPatientForUpdate(String uuid, Map<String, Object> propertiesToUpdate) {
