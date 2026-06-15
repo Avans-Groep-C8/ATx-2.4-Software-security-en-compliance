@@ -92,7 +92,6 @@ Snyk Code scande de volledige `omod` + `omod-common` boom. CodeQL analyseerde Ja
 |---------|--------|
 | Anonieme patient-read geblokkeerd | Pentest TC-AUTHZ-01 → 401 + privilege-melding |
 | XML Content-Type geblokkeerd | `ContentTypeFilter` + pentest TC-INJ-01 → 415 |
-| SQLi op patient-search beperkt | Pentest TC-INJ-03 → 400, geen data-lek |
 | Password/searchindex endpoints beschermd | Pentest TC-SPEC-04/05 → 401 |
 
 ---
