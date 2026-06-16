@@ -38,7 +38,7 @@ Buiten scope voor deze iteratie:
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Read-acties via `GET /patient/{uuid}`         | `getByUniqueId` wordt ook intern gebruikt door updateflows, waardoor read-logging eerst apart ontworpen moet worden om dubbele of misleidende auditlogs te voorkomen. |
 | Observations, encounters, orders en allergies | Deze resources zijn relevant, maar vallen buiten de eerste implementatiescope om de PR klein en controleerbaar te houden.                                             |
-| Centrale SIEM- of WORM-opslag                 | De code schrijft auditregels via het logging-framework. Centrale opslag en retentie zijn configuratie-/beheermaatregelen buiten deze codewijziging.                   |
+| Centrale SIEM- of WORM-opslag | De lokale testomgeving schrijft auditlogs persistent naar bestand. Productiebrede centrale SIEM-/WORM-opslag en formele retentie-inrichting blijven beheermaatregelen buiten deze codewijziging. |
 | Volledige incidentdetectie of alerting        | Deze implementatie legt audit-events vast, maar voert nog geen patroonherkenning of automatische alarmering uit.                                                      |
 
 ---
@@ -76,7 +76,7 @@ Deze implementatie volgt uit de bevindingen in [`09-logging-gap-analyse.md`](./0
 Er is een centrale klasse toegevoegd:
 
 ```text
-omod-common/src/main/java/org/openmrs/module/webservices/rest/audit/AuditLogService.java
+omod/src/main/java/org/openmrs/module/webservices/rest/audit/AuditLogService.java
 ```
 
 Deze klasse bouwt auditlogregels op in een vast key-value-formaat en schrijft deze via een aparte auditlogger:
@@ -88,7 +88,7 @@ OPENMRS_REST_AUDIT
 De patiëntresource is aangepast in:
 
 ```text
-omod-common/src/main/java/org/openmrs/module/webservices/rest/web/v1_0/resource/openmrs1_8/PatientResource1_8.java
+omod/src/main/java/org/openmrs/module/webservices/rest/web/v1_0/resource/openmrs1_8/PatientResource1_8.java
 ```
 
 Daar zijn auditlog-aanroepen toegevoegd rond patiëntgerelateerde write-acties:
@@ -101,6 +101,49 @@ Daar zijn auditlog-aanroepen toegevoegd rond patiëntgerelateerde write-acties:
 De methode `save(...)` is bewust niet gebruikt als centrale plek voor logging, omdat deze methode zowel door create- als updateflows wordt gebruikt. Logging in `save(...)` zou daardoor onduidelijk maken of een actie een create of update was en kan leiden tot dubbele of verkeerd geïnterpreteerde auditregels.
 
 Ook `getByUniqueId(...)` is in deze iteratie bewust niet aangepast. Deze methode wordt niet alleen gebruikt voor directe read-acties, maar ook intern door andere flows zoals update. Logging op deze plek kan daardoor leiden tot extra read-logs die niet altijd overeenkomen met een expliciete gebruikeractie.
+
+### 5.1 Persistente auditlogopslag in de OpenMRS-testomgeving
+
+Naast de codewijziging is de OpenMRS-testomgeving aangepast zodat auditlogs niet alleen via de reguliere applicatielog beschikbaar zijn, maar automatisch worden opgeslagen in een apart auditlogbestand.
+
+De applicatie schrijft audit-events via de aparte logger:
+
+```text
+OPENMRS_REST_AUDIT
+```
+
+In de Log4j2-configuratie is deze logger gekoppeld aan een aparte rolling file appender:
+
+```text
+REST_AUDIT
+```
+
+De auditregels worden binnen de OpenMRS-runtime opgeslagen op:
+
+```text
+/openmrs/data/audit/openmrs-rest-audit.log
+```
+
+Deze map is via Docker gemount naar de hostmap:
+
+```text
+./logs/openmrs-audit
+```
+
+Daardoor is het auditlogbestand ook na het stoppen of herstarten van de container terug te vinden als:
+
+```text
+./logs/openmrs-audit/openmrs-rest-audit.log
+```
+
+De relevante configuratiebestanden zijn:
+
+```text
+config/log4j2.xml
+docker-compose.yml
+```
+
+In `log4j2.xml` is de auditlogger apart geconfigureerd met `additivity="false"`. Hierdoor worden auditlogs gescheiden opgeslagen van reguliere applicatie- en consolelogs. Dit ondersteunt traceerbaarheid, omdat auditregels niet verloren gaan wanneer de console-output verdwijnt.
 
 ---
 
@@ -215,7 +258,7 @@ De implementatie is getest met unit tests op `AuditLogService`.
 Testbestand:
 
 ```text
-omod-common/src/test/java/org/openmrs/module/webservices/rest/audit/AuditLogServiceTest.java
+omod/src/test/java/org/openmrs/module/webservices/rest/audit/AuditLogServiceTest.java
 ```
 
 De tests richten zich op:
@@ -249,7 +292,7 @@ De tests valideren vooral het auditlogformaat en de privacy-/sanitizationmaatreg
 De tests zijn uitgevoerd met Maven:
 
 ```powershell
-mvn -pl omod-common -Dtest=AuditLogServiceTest test
+mvn -pl omod -Dtest=AuditLogServiceTest test
 ```
 
 Resultaat:
@@ -278,38 +321,84 @@ Resultaat:
 
 ## 12. Handmatige validatie
 
-Naast de unit tests kan de implementatie handmatig worden gevalideerd door patiëntgerelateerde acties via de REST API uit te voeren en de applicatielog te controleren op auditregels met logger `OPENMRS_REST_AUDIT`.
+Naast de unit tests is de implementatie handmatig gevalideerd in de OpenMRS Docker-testomgeving waarin de aangepaste `webservices.rest`-module draait.
 
-| Actie | Verwachte auditregel | Resultaat |
-|---|---|---|
-| Patient create | `event=PATIENT_ACCESS outcome=SUCCESS action=CREATE` | Niet uitgevoerd in deze iteratie |
-| Patient update | `event=PATIENT_ACCESS outcome=SUCCESS action=UPDATE` | Niet uitgevoerd in deze iteratie |
-| Patient delete/void | `event=PATIENT_ACCESS outcome=SUCCESS action=DELETE_VOID` | Niet uitgevoerd in deze iteratie |
-| Patient purge | `event=PATIENT_ACCESS outcome=SUCCESS action=PURGE` | Niet uitgevoerd in deze iteratie |
-| Mislukte patiëntactie | `event=PATIENT_ACCESS outcome=FAILURE` | Niet uitgevoerd in deze iteratie |   
+Testomgeving:
 
-Voor auditbewijs kunnen screenshots worden toegevoegd van:
+| Onderdeel                 | Waarde                                         |
+| ------------------------- | ---------------------------------------------- |
+| OpenMRS container         | `openmrs-webservices-test-backend-1`           |
+| OpenMRS image             | `openmrs/openmrs-core:2.8.x-amazoncorretto-21` |
+| REST base URL             | `http://localhost:8090/openmrs/ws/rest/v1`     |
+| Auditlogger               | `OPENMRS_REST_AUDIT`                           |
+| Auditbestand in container | `/openmrs/data/audit/openmrs-rest-audit.log`   |
+| Auditbestand op host      | `./logs/openmrs-audit/openmrs-rest-audit.log`  |
 
-* de uitgevoerde REST-call;
-* de gegenereerde auditlogregel;
-* de Maven-testoutput;
-* de PR met codewijzigingen.
+### 12.1 Uitgevoerde REST-validatie
 
-Handmatige REST-validatie is niet uitgevoerd in deze iteratie. De werking is onderbouwd met unit tests, code review en de traceerbaarheid van de auditlog-aanroepen in `PatientResource1_8`. Een integratie- of REST-test is opgenomen als vervolgactie.
+| Actie | Verwachte auditregel | Resultaat | Bewijs |
+|---|---|---|---|
+| Patient create | `event=PATIENT_ACCESS outcome=SUCCESS action=CREATE` | Geslaagd | Auditregel aangetroffen in `./logs/openmrs-audit/openmrs-rest-audit.log` |
+| Patient update | `event=PATIENT_ACCESS outcome=SUCCESS action=UPDATE` | Geslaagd | Auditregel aangetroffen in `./logs/openmrs-audit/openmrs-rest-audit.log` |
+| Patient delete/void | `event=PATIENT_ACCESS outcome=SUCCESS action=DELETE_VOID` | Geslaagd | Auditregel aangetroffen in `./logs/openmrs-audit/openmrs-rest-audit.log` |
+| Mislukte patiëntactie | `event=PATIENT_ACCESS outcome=FAILURE action=CREATE` | Geslaagd | Auditregel aangetroffen in `./logs/openmrs-audit/openmrs-rest-audit.log` |
+| Persistente opslag | Auditregels blijven beschikbaar in `./logs/openmrs-audit/openmrs-rest-audit.log` | Geslaagd | Auditbestand is zichtbaar op de hostmachine |
 
----
+Tijdens de handmatige validatie zijn de volgende auditregels vastgelegd in het persistente auditlogbestand:
+
+```text
+event=PATIENT_ACCESS outcome=SUCCESS userId=82f18b44-6814-11e8-923f-e9a88dcb533f resourceType=Patient resourceUuid=e530f75b-429a-4533-83ef-98daf20e4e31 action=UPDATE timestamp=2026-06-16T14:53:15.691513053Z
+event=PATIENT_ACCESS outcome=SUCCESS userId=82f18b44-6814-11e8-923f-e9a88dcb533f resourceType=Patient resourceUuid=e530f75b-429a-4533-83ef-98daf20e4e31 action=DELETE_VOID timestamp=2026-06-16T15:07:59.647412622Z
+event=PATIENT_ACCESS outcome=SUCCESS userId=82f18b44-6814-11e8-923f-e9a88dcb533f resourceType=Patient resourceUuid=b39eed1d-4155-4b61-ab0e-61517ae3d849 action=CREATE timestamp=2026-06-16T15:08:38.600607719Z
+event=PATIENT_ACCESS outcome=FAILURE userId=82f18b44-6814-11e8-923f-e9a88dcb533f resourceType=Patient resourceUuid=e5043c9f-b61d-4e36-ba90-44c4f20df580 action=CREATE timestamp=2026-06-16T15:08:41.171440013Z
+```
+
+Deze regels tonen aan dat succesvolle patiëntmutaties worden vastgelegd met gebruiker, resultaat, resource-type, resource-UUID, actie en timestamp.
+
+### 12.2 Validatie van persistente auditlogopslag
+
+De auditregels worden via Log4j2 opgeslagen in een apart rolling auditlogbestand. Dit is gevalideerd door na het uitvoeren van REST-acties het hostbestand te openen:
+
+```powershell
+Get-Content .\logs\openmrs-audit\openmrs-rest-audit.log
+```
+
+De auditregels waren zichtbaar in dit bestand. Daarmee is aangetoond dat auditlogging automatisch wordt opgeslagen buiten de tijdelijke console-output van de container.
+
+### 12.3 Samenvatting testdekking
+
+De handmatige validatie toont aan dat de belangrijkste runtimepaden werken:
+
+| Runtimepad | Status |
+|---|---|
+| `CREATE` met `outcome=SUCCESS` | Getest en aangetoond |
+| `UPDATE` met `outcome=SUCCESS` | Getest en aangetoond |
+| `DELETE_VOID` met `outcome=SUCCESS` | Getest en aangetoond |
+| `CREATE` met `outcome=FAILURE` | Getest en aangetoond |
+| Persistente opslag naar `./logs/openmrs-audit/openmrs-rest-audit.log` | Getest en aangetoond |
+
+Niet alle mogelijke paden zijn handmatig getest. `PURGE`, `DELETE_ALREADY_VOIDED` en `PURGE_NOT_FOUND` zijn wel geïmplementeerd, maar niet afzonderlijk handmatig gevalideerd in deze iteratie.
 
 ## 13. Bewijsstukken
 
-| Bewijsstuk                         | Locatie / verwijzing                                                                                                 | Toelichting                                                       |
-|------------------------------------|----------------------------------------------------------------------------------------------------------------------| ----------------------------------------------------------------- |
-| Codewijziging `AuditLogService`    | `omod-common/src/main/java/org/openmrs/module/webservices/rest/audit/AuditLogService.java`                           | Centrale auditlogger toegevoegd                                   |
-| Codewijziging `PatientResource1_8` | `omod-common/src/main/java/org/openmrs/module/webservices/rest/web/v1_0/resource/openmrs1_8/PatientResource1_8.java` | Auditlogging toegevoegd voor create, update, delete/void en purge |
-| Unit tests                         | `omod-common/src/test/java/org/openmrs/module/webservices/rest/audit/AuditLogServiceTest.java`                       | Test auditlogformaat, sanitization en privacy                     |
-| Maven testresultaat                | ![Maven testresultaat](./bewijs/logging-testresultaat.png)                                                           | Toont dat de testset succesvol is uitgevoerd                      |
-| PR                                 | https://github.com/Avans-Groep-C8/ATx-2.4-Software-security-en-compliance/pull/58                                    | Laat zien dat de wijziging reviewbaar is aangeboden               |
-| Handmatige validatie               | Niet uitgevoerd in deze iteratie                                                                                     | REST-validatie is opgenomen als vervolgactie; unit tests en code review vormen het bewijs voor deze PR |
----
+| Bewijsstuk                         | Locatie / verwijzing                                                                                          | Toelichting                                                                  |
+|------------------------------------|---------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| Codewijziging `AuditLogService`    | `omod/src/main/java/org/openmrs/module/webservices/rest/audit/AuditLogService.java`                           | Centrale auditlogger toegevoegd                                              |
+| Codewijziging `PatientResource1_8` | `omod/src/main/java/org/openmrs/module/webservices/rest/web/v1_0/resource/openmrs1_8/PatientResource1_8.java` | Auditlogging toegevoegd voor create, update, purge en geërfde patiëntflows   |
+| Codewijziging `PatientResource1_9` | `omod/src/main/java/org/openmrs/module/webservices/rest/web/v1_0/resource/openmrs1_9/PatientResource1_9.java` | Auditlogging toegevoegd voor delete/void in OpenMRS 1.9 t/m 9.x              |
+| Unit tests                         | `omod/src/test/java/org/openmrs/module/webservices/rest/audit/AuditLogServiceTest.java`                       | Test auditlogformaat, sanitization en privacy                                |
+| Maven testresultaat                | `./bewijs/logging-testresultaat.png`                                                                          | Toont dat de testset succesvol is uitgevoerd                                 |
+| Log4j2-configuratie                | `testing/openmrs/config/log4j2.xml`                                                                           | Koppelt `OPENMRS_REST_AUDIT` aan rolling file appender `REST_AUDIT`          |
+| Docker Compose-configuratie        | `testing/openmrs/docker-compose.yml`                                                                          | Mount `/openmrs/data/audit` naar `./logs/openmrs-audit`                      |
+| Persistent auditlogbestand         | `testing/openmrs/logs/openmrs-audit/openmrs-rest-audit.log`                                                   | Bevat auditregels voor `CREATE`, `UPDATE`, `DELETE_VOID` en `CREATE FAILURE` |
+| Handmatige validatie create        | Screenshot Postman + auditregel in `openmrs-rest-audit.log`                                                   | Bewijst `CREATE` met `outcome=SUCCESS`                                       |
+| Handmatige validatie update        | Screenshot Postman + auditregel in `openmrs-rest-audit.log`                                                   | Bewijst `UPDATE` met `outcome=SUCCESS`                                       |
+| Handmatige validatie delete/void   | `./logs/openmrs-audit/openmrs-rest-audit.log` + screenshot Postman                                            | Bewijst `DELETE_VOID` met `outcome=SUCCESS`                                  |
+| Handmatige validatie failure-pad   | `./logs/openmrs-audit/openmrs-rest-audit.log` + screenshot Postman                                            | Bewijst `CREATE` met `outcome=FAILURE`                                       |
+| PR                                 | https://github.com/Avans-Groep-C8/ATx-2.4-Software-security-en-compliance/pull/58                             | Laat zien dat de wijziging reviewbaar is aangeboden                          |
+
+De bewijsvoering bestaat uit drie lagen: unit tests voor het auditlogformaat, handmatige REST-validatie voor runtimegedrag en persistente logconfiguratie voor traceerbaarheid na container-herstart.
+De loggingconfiguratie en het persistente auditlogbestand staan in de aparte OpenMRS-testomgeving waarin de aangepaste module handmatig is gevalideerd. Deze bestanden staan dus niet in dezelfde source-map als de Java-code van de module.
 
 ## 14. Relatie met NEN-7510
 
@@ -343,13 +432,13 @@ Deze risicoreductie is gedeeltelijk. Het risico is verlaagd voor patiëntgerelat
 Deze implementatie is een eerste verbetering van de auditlogging. De volgende punten blijven open voor vervolgwerk:
 
 | Vervolgactie                                                               | Reden                                                                                    |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+|----------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
 | Read-logging ontwerpen voor `GET /patient/{uuid}`                          | Nodig voor volledige audittrail van inzage in patiëntgegevens.                           |
 | Logging uitbreiden naar `obs`, `encounter`, `order` en `allergy` resources | Deze resources bevatten ook gevoelige medische gegevens.                                 |
 | Access denied en authentication failure breder loggen                      | Nodig om mislukte toegangspogingen beter te detecteren.                                  |
-| Logconfiguratie documenteren                                               | Nodig om te bepalen waar auditlogs worden opgeslagen en hoe lang ze worden bewaard.      |
-| Centrale monitoring/SIEM-koppeling beschrijven                             | Nodig voor detectie en opvolging van verdachte patronen.                                 |
-| Integratie- of REST-test toevoegen                                         | Nodig om automatisch aan te tonen dat `PatientResource1_8` runtime auditregels schrijft. |
+| Centrale monitoring/SIEM-koppeling beschrijven                             | Nodig voor detectie en opvolging van verdachte patronen buiten de lokale testomgeving.   |
+| Retentie- en toegangsbeleid voor auditlogs vastleggen                      | Nodig om formeel te bepalen hoe lang auditlogs bewaard worden en wie ze mag raadplegen.  |
+| Integratie- of REST-test toevoegen                                         | Nodig om automatisch aan te tonen dat de patiëntresources runtime auditregels schrijven. |
 
 ---
 

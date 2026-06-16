@@ -13,7 +13,12 @@ import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 
 public class AuditLogService {
@@ -39,14 +44,34 @@ public class AuditLogService {
 	}
 	
 	public void logEvent(String event, String outcome, String resourceType, String resourceUuid, String action) {
-		auditLogger.info(buildAuditMessage(
+		String auditMessage = buildAuditMessage(
 		    event,
 		    outcome,
 		    getCurrentUserId(),
 		    resourceType,
 		    resourceUuid,
 		    action
-		        ));
+		        );
+		
+		auditLogger.info(auditMessage);
+		writeAuditFile(auditMessage);
+	}
+	
+	private void writeAuditFile(String auditMessage) {
+		Path auditLogPath = Paths.get("/openmrs/data/audit/openmrs-rest-audit.log");
+		
+		try {
+			Files.createDirectories(auditLogPath.getParent());
+			Files.write(
+			    auditLogPath,
+			    (auditMessage + System.lineSeparator()).getBytes(StandardCharsets.UTF_8),
+			    StandardOpenOption.CREATE,
+			    StandardOpenOption.APPEND
+			        );
+		}
+		catch (IOException ex) {
+			auditLogger.warn("Could not write REST audit log file", ex);
+		}
 	}
 	
 	String buildAuditMessage(String event, String outcome, String userId, String resourceType, String resourceUuid,
