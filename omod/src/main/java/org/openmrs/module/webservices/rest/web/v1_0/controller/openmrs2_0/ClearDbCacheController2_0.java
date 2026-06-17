@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.hibernate.SessionFactory;
 import org.openmrs.OpenmrsObject;
 import org.openmrs.User;
+import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.webservices.rest.SimpleObject;
 import org.openmrs.module.webservices.rest.web.RestConstants;
@@ -49,6 +50,14 @@ public class ClearDbCacheController2_0 extends BaseRestController {
 	@RequestMapping
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void clearDbCache(@RequestBody(required = false) String json) throws Exception {
+		// Alleen beheerders mogen de DB-cache legen (SEC-019 / PT-003)
+		if (!Context.isAuthenticated()) {
+			throw new APIAuthenticationException("Must be authenticated to clear DB cache");
+		}
+		if (!Context.hasPrivilege(RestConstants.PRIV_MANAGE_RESTWS)) {
+			throw new APIAuthenticationException("Privilege required: " + RestConstants.PRIV_MANAGE_RESTWS);
+		}
+		
 		String resourceName = null;
 		String subResourceName = null;
 		String uuid = null;

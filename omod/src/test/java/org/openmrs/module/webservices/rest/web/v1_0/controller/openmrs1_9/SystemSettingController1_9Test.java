@@ -16,8 +16,13 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.openmrs.api.APIAuthenticationException;
+import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.GlobalProperty;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
@@ -25,6 +30,7 @@ import org.openmrs.module.webservices.rest.SimpleObject;
 import org.openmrs.module.webservices.rest.web.RestConstants;
 import org.openmrs.module.webservices.rest.web.RestTestConstants1_9;
 import org.openmrs.module.webservices.rest.web.v1_0.controller.MainResourceControllerTest;
+import org.openmrs.util.PrivilegeConstants;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -34,6 +40,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 public class SystemSettingController1_9Test extends MainResourceControllerTest {
 	
 	private AdministrationService service;
+	
+	@Rule
+	public ExpectedException expectedException = ExpectedException.none();
 	
 	/**
 	 * @see MainResourceControllerTest#getURI()
@@ -59,6 +68,48 @@ public class SystemSettingController1_9Test extends MainResourceControllerTest {
 	@Before
 	public void before() throws Exception {
 		this.service = Context.getAdministrationService();
+	}
+	
+	@After
+	public void restoreAuthenticatedContext() {
+		if (!Context.isAuthenticated()) {
+			Context.authenticate(new UsernamePasswordCredentials("admin", "test"));
+		}
+	}
+	
+	@Test
+	public void getAll_shouldRejectUserWithoutManageGlobalPropertiesPrivilege() throws Exception {
+		executeDataSet("sessionControllerTestDataset.xml");
+		Context.logout();
+		Context.authenticate("test_user", "test");
+		expectedException.expect(APIAuthenticationException.class);
+		expectedException.expectMessage("Privilege required: " + PrivilegeConstants.MANAGE_GLOBAL_PROPERTIES);
+		
+		handle(request(RequestMethod.GET, getURI()));
+	}
+	
+	@Test
+	public void getByUuid_shouldRejectUserWithoutManageGlobalPropertiesPrivilege() throws Exception {
+		executeDataSet("sessionControllerTestDataset.xml");
+		Context.logout();
+		Context.authenticate("test_user", "test");
+		expectedException.expect(APIAuthenticationException.class);
+		expectedException.expectMessage("Privilege required: " + PrivilegeConstants.MANAGE_GLOBAL_PROPERTIES);
+		
+		handle(newGetRequest(getURI() + "/" + getUuid()));
+	}
+
+	@Test
+	public void search_shouldRejectUserWithoutManageGlobalPropertiesPrivilege() throws Exception {
+		executeDataSet("sessionControllerTestDataset.xml");
+		Context.logout();
+		Context.authenticate("test_user", "test");
+		expectedException.expect(APIAuthenticationException.class);
+		expectedException.expectMessage("Privilege required: " + PrivilegeConstants.MANAGE_GLOBAL_PROPERTIES);
+		
+		MockHttpServletRequest req = request(RequestMethod.GET, getURI());
+		req.addParameter("q", "webservices");
+		handle(req);
 	}
 	
 	/**

@@ -17,12 +17,18 @@ import static org.junit.Assert.assertTrue;
 
 import org.hibernate.Query;
 import org.hibernate.SessionFactory;
+import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.openmrs.Location;
 import org.openmrs.Person;
 import org.openmrs.PersonName;
+import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.LocationService;
 import org.openmrs.api.PersonService;
+import org.openmrs.api.context.Context;
+import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.webservices.rest.web.v1_0.controller.RestControllerTestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -48,6 +54,36 @@ public class ClearDbCacheController2_0Test extends RestControllerTestUtils {
 	private static final Integer ID_8 = 8;
 	
 	private static final String QUERY_REGION = "test";
+	
+	@Rule
+	public ExpectedException expectedException = ExpectedException.none();
+	
+	@After
+	public void restoreAuthenticatedContext() {
+		if (!Context.isAuthenticated()) {
+			Context.authenticate(new UsernamePasswordCredentials("admin", "test"));
+		}
+	}
+	
+	@Test
+	public void clearDbCache_shouldRejectAnonymousRequests() throws Exception {
+		Context.logout();
+		expectedException.expect(APIAuthenticationException.class);
+		expectedException.expectMessage("Must be authenticated to clear DB cache");
+		
+		handle(newPostRequest(CLEAR_DB_CACHE_URI, "{}"));
+	}
+
+	@Test
+	public void clearDbCache_shouldRejectAuthenticatedUserWithoutManageRestWsPrivilege() throws Exception {
+		executeDataSet("sessionControllerTestDataset.xml");
+		Context.logout();
+		Context.authenticate("test_user", "test");
+		expectedException.expect(APIAuthenticationException.class);
+		expectedException.expectMessage("Privilege required: Manage RESTWS");
+		
+		handle(newPostRequest(CLEAR_DB_CACHE_URI, "{}"));
+	}
 	
 	@Test
 	public void clearDbCache_shouldEvictTheEntityFromTheCaches() throws Exception {
