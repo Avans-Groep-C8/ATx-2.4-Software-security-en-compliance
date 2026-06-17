@@ -7,19 +7,6 @@
 
 ---
 
-## Beoordelingscriteria
-
-| Criterium | Onvoldoende (0) | Voldoende | Goed (max) | Score |
-|-----------|-----------------|-----------|------------|-------|
-| Analyse onderhoudbaarheid | Resultaten ontbreken of zijn onduidelijk | Systematische analyse vastgelegd, grotendeels bruikbaar | Diepgaand, gestructureerd, onderbouwd met passende metrieken | / 20 |
-| Testopzet en testresultaten | Relevante tests ontbreken | Tests opgesteld en uitgevoerd, resultaten vastgelegd | Uitgebreide teststrategie, reproduceerbare en onderbouwde resultaten | / 20 |
-| Verbeteringen (prioritering en onderbouwing) | Verbeteringen ontbreken of niet geprioriteerd | Geprioriteerd en onderbouwd met analyse en testresultaten | Expliciete prioritering met impact/effort en consistente verwijzing naar meetgegevens | / 10 |
-| Aangepast ontwerp | Ontwerp ontbreekt of is niet gerelateerd | Duidelijk ontwerp met ontwerpprincipes en patronen | Doordachte keuzes, alternatieven besproken, gemotiveerd op kwaliteitseisen | / 20 |
-| Realisatie (PoC) & verantwoording | PoC ontbreekt of wijkt af van ontwerp | PoC grotendeels conform ontwerp, tooling beschreven | Kritische reflectie op tooling; PoC conform ontwerp | / 10 |
-| Validatie verbeteringen (testen & regressie) | Geen aangetoonde verbetering | Onderhoudbaarheid verbeterd, geen regressie | Sterk onderbouwd met metrieken, reproduceerbaar aangetoond | / 20 |
-
----
-
 ## 1. Analyse onderhoudbaarheid
 
 *(Wordt elders in het dossier uitgewerkt.)*
