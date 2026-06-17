@@ -66,7 +66,7 @@ docs/
 
 13. [auditrapport/01-gap-analyse.md](auditrapport/01-gap-analyse.md) — NEN-7510 gap-analyse  
 14. [auditrapport/06-security-backlog.md](auditrapport/06-security-backlog.md) — geprioriteerde security backlog  
-15. [auditrapport/07-security-code-review.md](auditrapport/07-security-code-review.md) — security code review  
+15. [auditrapport/08-security-code-review.md](auditrapport/08-security-code-review.md) — security code review  
 16. [auditrapport/07-code-coverage.md](auditrapport/07-code-coverage.md) — JaCoCo-onderbouwing  
 
 ### 5. Pentest
@@ -106,7 +106,7 @@ flowchart LR
 
     subgraph test [Testen]
         PT[pentestrapport]
-        SCR[07-security-code-review]
+        SCR[08-security-code-review]
     end
 
     subgraph fix [Verbetering]
@@ -159,7 +159,7 @@ flowchart LR
 | [04b-cicd-bow-tie.md](auditrapport/04b-cicd-bow-tie.md) | Bow-tie secret leak in CI/CD |
 | [05-bowtie.md](auditrapport/05-bowtie.md) | Bow-tie applicatierisico's |
 | [06-security-backlog.md](auditrapport/06-security-backlog.md) | Security backlog (SEC-xxx items) |
-| [07-security-code-review.md](auditrapport/07-security-code-review.md) | Security code review (SCR-xxx) |
+| [08-security-code-review.md](auditrapport/08-security-code-review.md) | Security code review (SCR-xxx) |
 | [07-code-coverage.md](auditrapport/07-code-coverage.md) | Code coverage onderbouwing (JaCoCo) |
 | [09-logging-gap-analyse.md](auditrapport/09-logging-gap-analyse.md) | Logging gap-analyse |
 | [10-attack-surface.md](auditrapport/10-attack-surface.md) | Attack surface analyse |
