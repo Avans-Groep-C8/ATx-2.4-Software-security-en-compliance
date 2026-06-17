@@ -50,6 +50,9 @@
 		<apacheTomcatVersion>6.0.53</apacheTomcatVersion>
 		<javaxVersion>4.0.1</javaxVersion>
 		<jacksonVersion>2.19.1</jacksonVersion>
+		<!-- Minimale instruction-coverage voor de JaCoCo-gate op de omod-module (0.00–1.00).
+		     Onderbouwing van de keuze (0.80): docs/auditrapport/07-code-coverage.md -->
+		<jacoco.coverage.minimum>0.80</jacoco.coverage.minimum>
 	</properties>
 
 	<!-- TODO: combine/simplify the "dependencyManagement" and "dependency" sections into a single "dependency" section and test/remove any unneeded dependencies -->
@@ -456,10 +459,23 @@
 						</includes>
 					</configuration>
 					<executions>
+						<!-- Instrumenteert de JVM zodat tijdens de tests coverage wordt verzameld -->
 						<execution>
 							<id>prepare-agent</id>
 							<goals>
 								<goal>prepare-agent</goal>
+							</goals>
+						</execution>
+						<!-- Genereert na de tests het coverage-rapport (HTML + XML + CSV).
+						     Draait in elke module zodat alle rapporten als CI-artefact mee kunnen.
+						     De coverage-gate (goal: check) staat in omod/pom.xml, omdat daar de
+						     security-relevante REST-resources zitten. Onderbouwing drempel:
+						     docs/auditrapport/07-code-coverage.md -->
+						<execution>
+							<id>report</id>
+							<phase>test</phase>
+							<goals>
+								<goal>report</goal>
 							</goals>
 						</execution>
 					</executions>
@@ -519,6 +535,11 @@
 			    <groupId>org.apache.maven.plugins</groupId>
 			    <artifactId>maven-surefire-plugin</artifactId>
 			    <version>3.5.3</version>
+			</plugin>
+			<!-- Activeert JaCoCo (config + executions geërfd uit pluginManagement) -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
 			</plugin>
 		</plugins>
 	</build>

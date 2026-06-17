@@ -1,0 +1,16 @@
+# Basis voor Maven-builds van de OpenMRS-module.
+# OpenMRS zelf draait apart; deze compose start geen server of database.
+name: atx-module
+
+services:
+  maven:
+    image: maven:3.9.9-eclipse-temurin-8
+    working_dir: /workspace
+    volumes:
+      # Projectcode beschikbaar in de container
+      - .:/workspace
+      # Maven cache hergebruiken tussen builds
+      - maven_cache:/root/.m2
+
+volumes:
+  maven_cache:

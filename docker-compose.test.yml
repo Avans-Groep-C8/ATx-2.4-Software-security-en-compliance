@@ -1,0 +1,4 @@
+# Test: unit- en module-tests draaien via Maven.
+services:
+  maven:
+    command: mvn clean verify -B

@@ -1,64 +1,51 @@
-# 5.6 Mini-complianceverslag - Pipeline
+# 5.6 Mini-complianceverslag - Pipeline (compliant by design)
 
-**Onderwerp:** pipeline van de OpenMRS `webservices.rest`-module
-**Norm:** NEN-7510:2024-2 (Beheersmaatregelen, hoofdstuk 8 - Technisch)
-**Datum:** 9 juni 2026
+**Onderwerp:** geplande CI/CD-pipeline voor de OpenMRS `webservices.rest`-module
+**Norm:** NEN-7510:2024-2 (Beheersmaatregelen, hoofdstuk 5 en 8)
+**Datum:** 3 juni 2026
 
 ## 1. Inleiding
 
-Dit mini-complianceverslag beoordeelt de **pipeline** van de OpenMRS `webservices.rest`-module tegen de relevante technische beheersmaatregelen uit NEN-7510:2024-2 (hoofdstuk 8, gericht op ontwikkeling en beheer). Het verslag hoort bij workshop WS02 (beveiligde pipeline) en vormt samen met de [gap-analyse van de applicatie](01-gap-analyse.md) de technische onderbouwing voor het auditrapport (WS06).
+Dit mini-complianceverslag is opgesteld **voordat** de pipeline werd gebouwd, volgens het principe *compliant by design*: regelgeving is een ontwerpeis, geen afvinklijstje achteraf. Het hoort bij workshop WS02 (beveiligde pipeline) en beschrijft per relevante NEN-7510:2024-2 control wat de control vereist, hoe we de CI/CD-pipeline gaan inrichten om eraan te voldoen, en welk restrisico er op het moment van schrijven nog is.
 
-De pipeline is bewust apart beoordeeld van de applicatiecode. Waar de gap-analyse kijkt naar wat de module zelf afdwingt, kijkt dit verslag naar de **geautomatiseerde processen** eromheen: hoe code wordt gebouwd, getest, gescand en gedocumenteerd. De beoordeling is bewijsgericht volgens de audit-mindset uit WS01: per control benoemen we de geïmplementeerde pipeline-maatregel en verwijzen we naar het concrete bewijs (`bestand:regel`) in `.github/workflows/`. Waar een maatregel ontbreekt, is dat als negatief bevinding vastgelegd in plaats van als aanname.
+Het team werkt **trunk-based**: er is één langlevende branch (`main`) en geen `test`/`develop`-branches. Wijzigingen komen uitsluitend via een pull request naar `main`, met minimaal één verplichte review en verplichte CI-checks vóór de merge. Omgevingsscheiding (OTAP) wordt niet via branches geregeld maar via GitHub Environments en aparte `docker-compose`-configuraties.
 
-## 2. Pipeline-overzicht
+De pipeline wordt apart beoordeeld van de applicatiecode; die laatste komt aan bod in de [gap-analyse van de applicatie](01-gap-analyse.md). Samen vormen ze de technische onderbouwing voor het eindauditrapport (WS06). De controlkeuze volgt de relevante controls uit WS02.
 
-De pipeline bestaat uit drie GitHub Actions-workflows. Samen dekken zij het bouwen, testen, statisch scannen en documenteren van de componenten af.
+## 2. Plan per control
 
-| Workflow | Doel | Triggers |
-|---|---|---|
-| `.github/workflows/build.yml` | Compile + unit/integration tests | push & PR op `main`/`test`/`develop`, `workflow_dispatch` |
-| `.github/workflows/codeql.yml` | CodeQL SAST (statische codeanalyse) | push & PR op `main`/`test`/`develop`, wekelijkse cron |
-| `.github/workflows/sbom.yml` | CycloneDX-SBOM genereren | push & PR op `main`, `workflow_dispatch` |
+Per control: de eis (wat de norm vraagt), de geplande pipeline-maatregel, en het restrisico (wat nog niet is ingericht en waarom).
 
-Opvallend is dat de SBOM-workflow alleen op `main` draait, terwijl build en CodeQL ook op `test` en `develop` actief zijn. Voor de feature-branches is er dus wel statische analyse en testdekking, maar geen actuele SBOM.
-
-## 3. Beoordeling per control
-
-Onderstaande tabel koppelt elke relevante NEN-7510-2 control aan de aanwezige pipeline-maatregel, het bewijs en een statusoordeel. De status drukt uit in hoeverre de control aantoonbaar volledig is afgedekt: **Aanwezig** (volledig), **Gedeeltelijk** (basis aanwezig maar onvolledig) of **Afwezig**.
-
-| NEN-7510-2 control | Pipeline-maatregel | Bewijs (`bestand:regel`) | Status |
+| Control (NEN-7510-2) | Eis (kort) | Geplande pipeline-maatregel | Restrisico |
 |---|---|---|---|
-| **8.4** Toegang tot broncode | Workflow-token met least privilege (`permissions: contents: read`); CodeQL krijgt alleen `security-events: write`. Wijzigingen lopen via pull requests. | `build.yml:10-11`; `codeql.yml:31-40`; `sbom.yml:10-11`; PR-triggers `build.yml:6-7` | 🟡 Gedeeltelijk |
-| **8.8** Beheer van technische kwetsbaarheden | CodeQL SAST op elke push/PR en wekelijks (cron). CycloneDX-SBOM voor componenttransparantie. | `codeql.yml:14-20` (triggers), `codeql.yml:98-101` (analyse); `sbom.yml:35-41` (SBOM naar `docs/sbom.cdx.json`) | 🟡 Gedeeltelijk |
-| **8.15** Logging (pipeline-activiteiten) | GitHub Actions legt per run/job/stap uitvoeringslogs vast en registreert wie een run triggert; testrapporten worden als artefact bewaard. | `build.yml:50-56` (upload surefire-reports); run-logs per workflow (GitHub Actions) | 🟡 Gedeeltelijk |
-| **8.25** Beveiligde ontwikkellevenscyclus | Beveiligingsstappen (SAST + SBOM + tests) zijn ingebed in de pipeline en draaien geautomatiseerd bij elke wijziging. | `codeql.yml:14-20`; `sbom.yml:3-8`; `build.yml:3-8` | 🟡 Gedeeltelijk |
-| **8.28** Veilig coderen | CodeQL geeft geautomatiseerde feedback op onveilige codepatronen (`java-kotlin` + `actions`). | `codeql.yml:45-49` (taalmatrix), `codeql.yml:98-101` | 🟡 Gedeeltelijk |
-| **8.29** Beveiligingstests in ontwikkeling en acceptatie | `mvn verify` draait de test-suite en CodeQL-analyse draait geautomatiseerd bij elke push/PR. | `build.yml:32-48` (test-job); `codeql.yml:17-18` (PR-trigger) | ✅ Aanwezig |
-| **8.31** Scheiding van ontwikkel-, test- en productieomgeving | Aparte branches `main`/`test`/`develop`; de pipeline draait gescheiden per branch. | `build.yml:4-7`; `codeql.yml:15-18` | 🟡 Gedeeltelijk |
-| **8.32** Wijzigingsbeheer | Elke wijziging loopt via een pull request; build, test en SAST draaien daarbij als controles. Acties zijn op versie vastgezet (SHA-pin). | PR-triggers `build.yml:6-7`, `codeql.yml:17-18`; SHA-pinned action `sbom.yml:36` | 🟡 Gedeeltelijk |
+| **8.4 / 8.32** Toegang broncode & wijzigingsbeheer | Toegang tot broncode is beperkt; elke wijziging is traceerbaar naar een persoon. | Trunk-based op `main` met branch protection/ruleset: alleen via PR, minimaal 1 review, alle CI-checks moeten slagen, force-push en directe deletes geblokkeerd (ook voor admins). MFA verplicht voor alle GitHub-accounts; RBAC op de repo; GitHub Audit Log. | Signed commits (PGP) nog niet ingericht; ruleset moet nog worden vastgelegd en aantoonbaar gemaakt (export/screenshot). |
+| **8.8** Beheer technische kwetsbaarheden | Kwetsbaarheden tijdig identificeren, beoordelen en verhelpen. | SAST (CodeQL) in CI; SCA op dependencies (Dependabot en/of Snyk); SBOM in CycloneDX-formaat. Patchbeleid op CVSS: kritiek (9-10) <= 24 uur, hoog (7-8.9) <= 1 week, midden (4-6.9) volgende sprint, laag (<4) geplande release. | Patchbeleid moet formeel worden vastgelegd; afweging rond "dependency cooldown" bij supply-chain-risico nog te maken. |
+| **8.9** Configuratiebeheer | Configuraties beheerd, gedocumenteerd en beschermd tegen ongeautoriseerde wijziging. | Pipeline-as-code: workflows in `.github/workflows/`, versiebeheerd en reviewable. Quality gates blokkeren bij falen. Secrets via GitHub (Environment) Secrets, nooit hardcoded. Immutable artifacts (een fix is een nieuwe build). Externe actions op vaste commit-hash (SHA-pin). | Alerting op wijzigingen in workflow-bestanden nog in te richten (zie 8.16). |
+| **8.16** Monitoring van de pipeline | Activiteiten worden gelogd en gecontroleerd op afwijkingen. | GitHub Security tab + Dependabot alerts; GitHub Audit Log (exporteerbaar naar SIEM); webhooks/notificaties bij kritieke events (mislukte runs, secret-gebruik, wijziging van workflows, deployment-events). | SIEM-koppeling en alerting nog niet ingericht; grotendeels op organisatieniveau te beleggen. |
+| **8.25** Beveiligen tijdens ontwikkelen | Security by design: secure coding, threat modeling, gescheiden omgevingen, authenticatie/autorisatie als ontwerpeis, safe defaults. | Security-stappen ingebed in de pipeline vanaf de eerste commit; threat model in de designfase (bijv. STRIDE); omgevingsscheiding (zie 8.31); veilige standaardconfiguratie. | Threat model moet nog worden opgesteld en gedocumenteerd. |
+| **8.28** Veilig programmeren | Vastgestelde richtlijnen voor veilig coderen, die worden gecontroleerd. | Coding standards (OWASP Secure Coding Practices); linters die bij violations falen in CI (SpotBugs, PMD, Checkstyle); GitHub Secret Scanning + pre-commit hooks (detect-secrets); dependency pinning (exacte versies/hashes, geen `latest`). | Linters en secret scanning nog te activeren in de CI. |
+| **8.29** Beveiligingstests | Beveiligingstests in de ontwikkelcyclus; resultaten als bewijs bewaren. | SAST bij elke commit; Dependency Review bij elke PR (blokkeer nieuwe kwetsbare deps); DAST (OWASP ZAP) op de acceptatieomgeving; testresultaten als pipeline-artifact; pentest bij releases. | DAST en pentest nog niet ingericht; vereisen een acceptatieomgeving (zie 8.31). |
+| **8.31** Scheiding van omgevingen (OTAP) | Gescheiden ontwikkel-, test-, acceptatie- en productieomgeving; productiedata nooit naar een lagere omgeving; gescheiden secrets. | GitHub Environments (minimaal test + productie) met protection rules en approval-gates; gescheiden secrets per omgeving; productie achter goedkeuring (2 approvers + tijdvenster); aparte `docker-compose`-bestanden per omgeving. | Acceptatieomgeving nog niet apart ingericht; volledige OTAP-inrichting volgt in opdracht 1. |
+| **8.33** Testgegevens | Realistische tests met realistische, maar niet echte data. | Synthetische/gegenereerde testdata (bijv. Synthea); productiedata gaat nooit naar lagere omgevingen; gevoelige data zo snel mogelijk verwijderen na gebruik. | Pseudonimisering is technisch lastig; testdata-generatie nog in te richten. |
+| **5.23** Beveiliging clouddiensten (GitHub) | Vastleggen welke clouddiensten worden gebruikt en met welk doel; beheerde toegang; retentiebeleid. | GitHub via organisatie-accounts (geen persoonlijke accounts); optioneel SSO/SAML met de organisatie-IdP; retentiebeleid voor pipeline-logs en artifacts vastleggen. | SSO is optioneel en (nog) niet ingericht; retentiebeleid nog vast te leggen. |
+| **5.30** Bedrijfscontinuïteit (BCM) | Continuïteit en herstel na incident. | Beperkt relevant voor dit project: repository-mirror/backup, een rollback-procedure en RTO/RPO benoemen; de pipeline zelf is onderdeel van het continuïteitsplan. | Door WS02 als minder relevant aangemerkt; alleen op hoofdlijnen uitgewerkt. |
 
-## 4. Bevindingen
+## 3. Checklist (minimale eisen aantoonbaar compliant pipeline)
 
-**Sterke punten.** De pipeline laat een volwassen basis zien. Beveiliging is geen losse stap maar zit ingebed in de standaard pipeline: bij elke push of pull request draaien zowel de testsuite (`mvn verify`) als de CodeQL-analyse, en bij wijzigingen op `main` wordt automatisch een machineleesbare CycloneDX-SBOM gegenereerd. Daarmee is **8.29 (beveiligingstests)** aantoonbaar afgedekt: het testen en scannen gebeurt geautomatiseerd en is herhaalbaar. Verder zijn twee hardening-keuzes het noemen waard: de workflow-tokens draaien met minimale rechten (`contents: read`, en alleen CodeQL krijgt `security-events: write`), en de SBOM-workflow zet de externe action op een vaste commit-hash vast (SHA-pin), wat supply-chain-manipulatie via een verschoven tag voorkomt.
+Deze checklist (uit WS02) gebruiken we als planningsdoel; afvinken gebeurt naarmate opdracht 1 wordt uitgevoerd.
 
-**Zwakke punten.** Tegenover die basis staan een paar concrete gaten. Bij **8.8 (kwetsbaarhedenbeheer)** is er wel statische analyse (CodeQL) en een SBOM, maar geen software composition analysis: er is geen Dependabot- of vergelijkbare SCA-configuratie aangetroffen (`.github/dependabot.yml` ontbreekt) en geen vastgelegd patchbeleid op basis van CVSS-ernst. Bekende kwetsbaarheden in afhankelijkheden worden dus niet automatisch gesignaleerd. Bij **8.28 (veilig coderen)** draait CodeQL met de standaard-queryset; de uitgebreidere `security-extended`-queries staan uitgeschakeld (`codeql.yml:79`, uitgecommentarieerd), waardoor een deel van de mogelijke bevindingen niet wordt opgepikt.
+- [ ] Branch protection actief op `main` - alleen via PR, reviews verplicht
+- [ ] Alle CI-checks slagen vóór merge (build, test, SAST)
+- [ ] CodeQL of gelijkwaardige SAST actief (bijv. Snyk)
+- [ ] Secret Scanning actief
+- [ ] Dependabot alerts + security updates actief
+- [ ] Dependency Review Action gekoppeld aan PR's
+- [ ] SBOM gegenereerd (CycloneDX of SPDX) en geanalyseerd (SCA)
+- [ ] GitHub Environments gedefinieerd met protection rules
+- [ ] Secrets gescheiden per environment
+- [ ] Pipeline-artifacts (rapporten, SBOM) worden bewaard
+- [ ] README.md beschrijft beleid en procedure (mini-ISMS)
 
-**Het belangrijkste aandachtspunt is afdwingbaarheid.** De build-, test- en scanstappen zijn waardevolle controles, maar of ze een onveilige merge daadwerkelijk **tegenhouden** hangt af van branch protection en verplichte status checks. Die instellingen staan op organisatie-/repositoryniveau en zijn niet uit de broncode aantoonbaar. Zolang dat niet is aangetoond, zijn de checks een signaal en geen harde poort, wat de status van **8.4** en **8.32** op "Gedeeltelijk" houdt.
+## 4. Conclusie
 
-**Logging in de juiste context.** Het is belangrijk om **8.15** hier zuiver te duiden: GitHub Actions houdt uitvoeringslogs bij en registreert wie een run start, wat bruikbaar is voor de traceerbaarheid van de pipeline zelf. Dit is echter iets anders dan de audit-logging van handelingen op patiëntdossiers die 8.15 in de zorgcontext vraagt; bovendien zijn Actions-logs standaard beperkt houdbaar en niet onveranderlijk (append-only). Daarom staat 8.15 hier op "Gedeeltelijk" en niet hoger. De eigenlijke 8.15-eis voor patiëntdata wordt in de [gap-analyse van de applicatie](01-gap-analyse.md) beoordeeld.
-
-## 5. Restpunten en aanbevelingen
-
-De volgende acties tillen de gedeeltelijk afgedekte controls naar een aantoonbaar volledig niveau.
-
-| Control | Gap | Aanbevolen actie |
-|---|---|---|
-| **8.8** | Geen SCA-tool (Dependabot/Snyk) en geen patchbeleid op CVSS-ernst (`.github/dependabot.yml` ontbreekt). | Dependabot/SCA toevoegen en een patchbeleid met deadlines per CVSS-score vastleggen. |
-| **8.28** | CodeQL draait met de default-queryset; `security-extended` staat uit (`codeql.yml:79`). | `queries: security-extended,security-and-quality` activeren. |
-| **8.4 / 8.32** | Branch protection, verplichte review en "disable force push" niet uit de repo aantoonbaar. | Branch protection + verplichte PR-review + required status checks aanzetten en aantoonbaar maken (policy-export/screenshot). |
-| **8.15** | Pipeline-logs zijn beperkt houdbaar en niet onveranderlijk. | Indien nodig pipeline-/repository-auditlogs exporteren naar een centrale, append-only logvoorziening met bewaartermijn. |
-| **8.31** | Branch-scheiding aanwezig, maar geen aparte deploy-/acceptatieomgevingen in de repo. | Deploy-/environment-stappen met approvals toevoegen indien van toepassing. |
-
-## 6. Conclusie
-
-De pipeline dekt de kern van de NEN-7510-2 ontwikkel-controls goed af: beveiligingstests draaien aantoonbaar en geautomatiseerd (8.29), de ontwikkellevenscyclus bevat ingebedde security-stappen (8.25) en er zijn duidelijke hardening-keuzes gemaakt (least-privilege tokens, SHA-pinning). De resterende punten zijn overzichtelijk en concreet: voeg software composition analysis met patchbeleid toe (8.8), schakel de uitgebreide CodeQL-queryset in (8.28), en maak de afdwingbaarheid van de checks aantoonbaar via branch protection (8.4 en 8.32). Geen enkele beoordeelde control is volledig afwezig; de pipeline is daarmee op de goede weg, maar nog niet volledig auditbestendig.
+Dit plan legt vast hoe de CI/CD-pipeline vanaf het ontwerp aan NEN-7510:2024-2 gaat voldoen: toegang en wijzigingsbeheer via trunk-based PR's met review- en CI-gates (8.4/8.32), kwetsbaarhedenbeheer met SAST, SCA, SBOM en een CVSS-patchbeleid (8.8), configuratiebeheer via pipeline-as-code en secrets-beheer (8.9), en omgevingsscheiding via GitHub Environments (8.31). De belangrijkste restrisico's op dit moment zijn de nog vast te leggen branch-protection-ruleset, het formele patchbeleid, en de acceptatieomgeving voor DAST/pentest. Deze worden in opdracht 1 ingericht en daarna in het eindauditrapport (WS06) met concreet bewijs onderbouwd.
