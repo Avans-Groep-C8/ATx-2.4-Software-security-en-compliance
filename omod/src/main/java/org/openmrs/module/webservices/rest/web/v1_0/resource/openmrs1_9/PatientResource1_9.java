@@ -15,6 +15,7 @@ import org.openmrs.Patient;
 import org.openmrs.Visit;
 import org.openmrs.api.VisitService;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.webservices.rest.audit.AuditLogService;
 import org.openmrs.module.webservices.rest.web.RequestContext;
 import org.openmrs.module.webservices.rest.web.RestConstants;
 import org.openmrs.module.webservices.rest.web.annotation.Resource;
@@ -23,21 +24,34 @@ import org.openmrs.module.webservices.rest.web.v1_0.resource.openmrs1_8.PatientR
 
 @Resource(name = RestConstants.VERSION_1 + "/patient", supportedClass = Patient.class, supportedOpenmrsVersions = { "1.9.* - 9.*" })
 public class PatientResource1_9 extends PatientResource1_8 {
-	
+
+	private final AuditLogService auditLogService = new AuditLogService();
+
 	@Override
 	public void delete(Patient patient, String reason, RequestContext context) throws ResponseException {
-		if (patient.isVoided()) {
-			// DELETE is idempotent, so we return success here
+		if (patient == null) {
+			auditLogService.logPatientAccess(null, "DELETE_NOT_FOUND", false);
 			return;
 		}
-		
-		VisitService visitService = Context.getVisitService();
-		List<Visit> visits = Context.getVisitService().getVisitsByPatient(patient);
-		for (Visit visit : visits) {
-			visitService.voidVisit(visit, "Patient deleted");
+
+		if (patient.isVoided()) {
+			auditLogService.logPatientAccess(patient.getUuid(), "DELETE_ALREADY_VOIDED", true);
+			return;
 		}
-		
-		super.delete(patient, reason, context);
+
+		try {
+			VisitService visitService = Context.getVisitService();
+			List<Visit> visits = Context.getVisitService().getVisitsByPatient(patient);
+			for (Visit visit : visits) {
+				visitService.voidVisit(visit, "Patient deleted");
+			}
+
+			super.delete(patient, reason, context);
+			auditLogService.logPatientAccess(patient.getUuid(), "DELETE_VOID", true);
+		}
+		catch (RuntimeException ex) {
+			auditLogService.logPatientAccess(patient.getUuid(), "DELETE_VOID", false);
+			throw ex;
+		}
 	}
-	
 }
