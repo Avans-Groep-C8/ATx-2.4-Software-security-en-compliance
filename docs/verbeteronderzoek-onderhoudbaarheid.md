@@ -117,7 +117,31 @@ De cursus behandelde de volgende patronen die relevant zijn voor deze codebase:
 
 ---
 
-### 1.6 Samenvatting analysebevindingen
+### 1.6 Non-functional requirements onderhoudbaarheid
+
+Op basis van de analyse zijn de volgende NFR's vastgesteld. Elke NFR is meetbaar gedefinieerd en afgedwongen via tooling die het CI-proces laat falen bij niet-voldoen.
+
+| NFR-ID | Eis | Drempelwaarde | Tool | CI faalt bij |
+|---|---|---|---|---|
+| NFR-M01 | Instruction coverage `omod` | ≥ 80% | JaCoCo 0.8.13 (`jacoco:check`) | Coverage < 0.80 in `mvn verify` |
+| NFR-M02 | Cyclomatische complexiteit per methode | ≤ 10 | SonarCloud (rule `java:S3776`) | Quality Gate "Blocker" op nieuwe code |
+| NFR-M03 | Code duplicatie module-breed | ≤ 3% | SonarCloud | Quality Gate overschrijding |
+| NFR-M04 | Geen kritieke beveiligingskwetsbaarheden ongetriaged | 0 Critical open | SonarCloud Security Hotspots + Snyk SCA | Nieuwe Critical in PR zonder triage |
+| NFR-M05 | Technische schuld nieuw code (`omod`) | ≤ 30 minuten per PR | SonarCloud (maintainability rating A) | Rating slechter dan A op delta |
+
+**Koppeling aan ISO 25010:**
+
+| NFR-ID | ISO 25010 sub-characteristic |
+|---|---|
+| NFR-M01 | Testability |
+| NFR-M02 | Modifiability, Analysability |
+| NFR-M03 | Analysability, Modifiability |
+| NFR-M04 | - (NEN-7510 A.8.8 / A.5.15) |
+| NFR-M05 | Modifiability |
+
+---
+
+### 1.7 Samenvatting analysebevindingen
 
 | Bevinding | Prioriteit | ISO 25010 effect |
 |---|---|---|
