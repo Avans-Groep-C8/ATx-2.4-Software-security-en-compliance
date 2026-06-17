@@ -693,7 +693,7 @@ Deploy: `.omod` in OpenMRS Docker-testomgeving; auditlog beschikbaar via `./logs
 | PR #58 | Auditlogging `AuditLogService` + `PatientResource` |
 | Branch `fix/mitigatie-PT-003-PT-004` | Controller auth-hardening |
 
-Code review uitgevoerd conform `docs/auditrapport/07-security-code-review.md` (SCR-001 t/m SCR-004).
+Code review uitgevoerd conform `docs/auditrapport/08-security-code-review.md` (SCR-001 t/m SCR-004).
 
 ---
 
@@ -860,5 +860,5 @@ Deze beperkingen verlagen de validatiescore niet voor de in-scope verbeteringen:
 | Code coverage | `docs/auditrapport/07-code-coverage.md` |
 | PT-003 mitigatie | `docs/pentest/bevinding-PT-003-mitigatie.md` |
 | PT-004 mitigatie | `docs/pentest/bevinding-PT-004-mitigatie.md` |
-| Security code review | `docs/auditrapport/07-security-code-review.md` |
+| Security code review | `docs/auditrapport/08-security-code-review.md` |
 | Persistent auditlog (voorbeeld) | `docs/auditrapport/openmrs-rest-audit.log` |
