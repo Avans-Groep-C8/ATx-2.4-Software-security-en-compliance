@@ -53,6 +53,11 @@
 		<!-- Minimale instruction-coverage voor de JaCoCo-gate op de omod-module (0.00–1.00).
 		     Onderbouwing van de keuze (0.80): docs/auditrapport/07-code-coverage.md -->
 		<jacoco.coverage.minimum>0.80</jacoco.coverage.minimum>
+
+		<!-- SonarCloud: statische analyse en kwaliteitspoorten (NFR-M01 t/m NFR-M05) -->
+		<sonar.organization>avans-groep-c8</sonar.organization>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
+		<sonar.projectKey>Avans-Groep-C8_ATx-2.4-Software-security-en-compliance</sonar.projectKey>
 	</properties>
 
 	<!-- TODO: combine/simplify the "dependencyManagement" and "dependency" sections into a single "dependency" section and test/remove any unneeded dependencies -->
