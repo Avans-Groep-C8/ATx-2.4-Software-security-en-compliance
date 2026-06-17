@@ -390,6 +390,7 @@ Bekijk alle alerts: GitHub → Security → Code scanning.
 | Security backlog | [06-security-backlog.md](06-security-backlog.md) |
 | Scan-triagebeleid | [false-positives-beleid.md](../false-positives-beleid.md) |
 | Dependency-updateadvies | [bijlage-dependency-updateadvies.md](bijlage-dependency-updateadvies.md) |
+| Eindauditrapport (§5–§6) | [00-auditrapport.md](00-auditrapport.md) |
 | Risk Assessment | [00-risk-assessment.md](00-risk-assessment.md) |
 | Snyk workflow | [.github/workflows/snyk.yml](../../.github/workflows/snyk.yml) |
 | CodeQL workflow | [.github/workflows/codeql.yml](../../.github/workflows/codeql.yml) |
