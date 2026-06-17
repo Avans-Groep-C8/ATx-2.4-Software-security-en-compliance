@@ -13,9 +13,11 @@ import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.GlobalProperty;
+import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.APIException;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
+import org.openmrs.util.PrivilegeConstants;
 import org.openmrs.customdatatype.CustomDatatype;
 import org.openmrs.customdatatype.CustomDatatypeUtil;
 import org.openmrs.module.webservices.rest.web.RequestContext;
@@ -27,6 +29,7 @@ import org.openmrs.module.webservices.rest.web.representation.DefaultRepresentat
 import org.openmrs.module.webservices.rest.web.representation.FullRepresentation;
 import org.openmrs.module.webservices.rest.web.representation.RefRepresentation;
 import org.openmrs.module.webservices.rest.web.representation.Representation;
+import org.openmrs.module.webservices.rest.SimpleObject;
 import org.openmrs.module.webservices.rest.web.resource.api.PageableResult;
 import org.openmrs.module.webservices.rest.web.resource.impl.DelegatingCrudResource;
 import org.openmrs.module.webservices.rest.web.resource.impl.DelegatingResourceDescription;
@@ -46,6 +49,55 @@ import io.swagger.models.properties.StringProperty;
 public class SystemSettingResource1_9 extends DelegatingCrudResource<GlobalProperty> {
 	
 	public static final String GENERAL = "General Settings";
+	
+	// Authenticated-rol geeft iedereen Get/View Global Properties; REST vereist Manage (SEC-011 / PT-006)
+	private void requireManageGlobalProperties() {
+		if (!Context.hasPrivilege(PrivilegeConstants.MANAGE_GLOBAL_PROPERTIES)) {
+			throw new APIAuthenticationException("Privilege required: " + PrivilegeConstants.MANAGE_GLOBAL_PROPERTIES);
+		}
+	}
+	
+	@Override
+	public Object retrieve(String uuid, RequestContext context) throws ResponseException {
+		requireManageGlobalProperties();
+		return super.retrieve(uuid, context);
+	}
+	
+	@Override
+	public SimpleObject getAll(RequestContext context) throws ResponseException {
+		requireManageGlobalProperties();
+		return super.getAll(context);
+	}
+	
+	@Override
+	public SimpleObject search(RequestContext context) throws ResponseException {
+		requireManageGlobalProperties();
+		return super.search(context);
+	}
+	
+	@Override
+	public Object create(SimpleObject propertiesToCreate, RequestContext context) throws ResponseException {
+		requireManageGlobalProperties();
+		return super.create(propertiesToCreate, context);
+	}
+	
+	@Override
+	public Object update(String uuid, SimpleObject propertiesToUpdate, RequestContext context) throws ResponseException {
+		requireManageGlobalProperties();
+		return super.update(uuid, propertiesToUpdate, context);
+	}
+	
+	@Override
+	public void delete(String uuid, String reason, RequestContext context) throws ResponseException {
+		requireManageGlobalProperties();
+		super.delete(uuid, reason, context);
+	}
+	
+	@Override
+	public void purge(String uuid, RequestContext context) throws ResponseException {
+		requireManageGlobalProperties();
+		super.purge(uuid, context);
+	}
 	
 	/**
 	 * @see DelegatingCrudResource#getRepresentationDescription(Representation)

@@ -50,6 +50,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm maven
 
 ## OpenMRS apart
 
+Voor pentest/hertest van `webservices.rest`: gebruik de aparte stack in [`../openmrs-webservices-test/`](../openmrs-webservices-test/).
+
 De Reference Application container laadt modules uit zijn eigen modules-directory. Na een dev- of prod-build:
 
 1. Neem het `.omod` uit `deploy/modules/` of `dist/`
