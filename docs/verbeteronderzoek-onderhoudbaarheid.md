@@ -178,20 +178,23 @@ De cursus-methodiek (8 stappen uit PDF 06) is hier volledig doorlopen.
 
 #### Stap 1 - Controlestroom-graaf
 
-```
-  START
-    │
-    ▼
-  [N1] value == null || value.trim().isEmpty() ?
-    │                           │
-  true (P1/P2)              false (P3)
-    │                           │
-  [N2] return "-"          [N3] return value
-    │                           .replace("\n","_")
-    │                           .replace("\r","_")
-    │                           .replace("\t","_")
-    │                           │
-    └───────────► END ◄─────────┘
+```mermaid
+flowchart TD
+    S(["START"])
+    N1{"value == null
+    || value.trim().isEmpty() ?"}
+    N2["return '-'"]
+    N3["return value
+    .replace('\n','_')
+    .replace('\r','_')
+    .replace('\t','_')"]
+    E(["END"])
+
+    S --> N1
+    N1 -->|"true - P1/P2"| N2
+    N1 -->|"false - P3"| N3
+    N2 --> E
+    N3 --> E
 ```
 
 Knooppunten: N1 (beslispunt), N2 (return "-"), N3 (return vervangen string)  
