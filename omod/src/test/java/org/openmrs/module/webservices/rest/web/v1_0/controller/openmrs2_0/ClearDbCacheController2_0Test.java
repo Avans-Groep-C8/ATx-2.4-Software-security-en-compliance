@@ -73,6 +73,17 @@ public class ClearDbCacheController2_0Test extends RestControllerTestUtils {
 		
 		handle(newPostRequest(CLEAR_DB_CACHE_URI, "{}"));
 	}
+
+	@Test
+	public void clearDbCache_shouldRejectAuthenticatedUserWithoutManageRestWsPrivilege() throws Exception {
+		executeDataSet("sessionControllerTestDataset.xml");
+		Context.logout();
+		Context.authenticate("test_user", "test");
+		expectedException.expect(APIAuthenticationException.class);
+		expectedException.expectMessage("Privilege required: Manage RESTWS");
+		
+		handle(newPostRequest(CLEAR_DB_CACHE_URI, "{}"));
+	}
 	
 	@Test
 	public void clearDbCache_shouldEvictTheEntityFromTheCaches() throws Exception {

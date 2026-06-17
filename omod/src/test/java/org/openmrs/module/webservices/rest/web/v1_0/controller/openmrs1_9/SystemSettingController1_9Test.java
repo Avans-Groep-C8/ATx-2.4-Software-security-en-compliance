@@ -98,6 +98,19 @@ public class SystemSettingController1_9Test extends MainResourceControllerTest {
 		
 		handle(newGetRequest(getURI() + "/" + getUuid()));
 	}
+
+	@Test
+	public void search_shouldRejectUserWithoutManageGlobalPropertiesPrivilege() throws Exception {
+		executeDataSet("sessionControllerTestDataset.xml");
+		Context.logout();
+		Context.authenticate("test_user", "test");
+		expectedException.expect(APIAuthenticationException.class);
+		expectedException.expectMessage("Privilege required: " + PrivilegeConstants.MANAGE_GLOBAL_PROPERTIES);
+		
+		MockHttpServletRequest req = request(RequestMethod.GET, getURI());
+		req.addParameter("q", "webservices");
+		handle(req);
+	}
 	
 	/**
 	 * @see MainResourceControllerTest#shouldGetAll()
