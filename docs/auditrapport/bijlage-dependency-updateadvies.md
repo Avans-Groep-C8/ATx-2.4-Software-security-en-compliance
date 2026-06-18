@@ -11,7 +11,7 @@
 
 ## 1. Samenvatting
 
-Op basis van de SBOM (`docs/sbom.cdx.json`) en SCA-output (Snyk `snyk test --all-projects` na `mvn clean install`, CI-run `27360377078`, artifact `snyk-results.json`) zijn over de vier Maven-modules samen **106 unieke kwetsbaarheden** gevonden:
+Op basis van de SBOM ([bijlage-sbom.cdx.json](bijlage-sbom.cdx.json); CI-bron: [docs/sbom.cdx.json](../sbom.cdx.json)) en SCA-output (Snyk `snyk test --all-projects` na `mvn clean install`, CI-run `27360377078`, artifact `snyk-results.json`) zijn over de vier Maven-modules samen **106 unieke kwetsbaarheden** gevonden:
 
 | Ernst (Snyk) | Uniek (alle modules) | CVSS-bereik (indicatief) |
 |--------------|----------------------|--------------------------|
@@ -44,7 +44,8 @@ Het Snyk.io-dashboard toont per Maven-module een eigen telling en sommeert die b
 
 | Bron | Pad / referentie | Rol |
 |------|------------------|-----|
-| SBOM (CycloneDX) | [docs/sbom.cdx.json](../sbom.cdx.json) | Versie-inventaris (Syft 1.42.3, 2026-06-03) |
+| SBOM (CycloneDX) — auditbijlage | [bijlage-sbom.cdx.json](bijlage-sbom.cdx.json) | Versie-inventaris (Syft 1.42.3, 2026-06-03) |
+| SBOM (CycloneDX) — CI-bron | [docs/sbom.cdx.json](../sbom.cdx.json) | Zelfde inhoud; gegenereerd door [sbom.yml](../../.github/workflows/sbom.yml) |
 | SBOM CI-artifact | Workflow [sbom.yml](../../.github/workflows/sbom.yml), artifact `sbom-cyclonedx-json` | Actuele build op `main` |
 | SCA (Snyk) | [snyk.yml](../../.github/workflows/snyk.yml) → `snyk-sca.json` in `snyk-results.json` | CVE-detectie op dependency tree |
 | Samengevoegd scanartifact | CI artifact `snyk-results` (run 2026-06-11) | Audit trail (NEN-7510 8.29) |
@@ -87,7 +88,7 @@ Het Snyk.io-dashboard toont per Maven-module een eigen telling en sommeert die b
 
 ### 3.3 SBOM-scope
 
-De repository-SBOM (`docs/sbom.cdx.json`) bevat **82 componenten** (Maven, GitHub Actions, bestanden). De SCA-scan na Maven-build is leidend voor **runtime-relevante** Java-dependencies; de SBOM dient als versie-inventaris en supply-chain-bewijs (NEN-7510 8.8 + 8.9).
+De audit-SBOM ([bijlage-sbom.cdx.json](bijlage-sbom.cdx.json)) bevat **82 componenten** (Maven, GitHub Actions, bestanden). De SCA-scan na Maven-build is leidend voor **runtime-relevante** Java-dependencies; de SBOM dient als versie-inventaris en supply-chain-bewijs (NEN-7510 8.8 + 8.9).
 
 ---
 
@@ -179,7 +180,7 @@ Prioritering volgt [false-positives-beleid.md](../false-positives-beleid.md) §3
 
 | Vereiste 8.8 | Invulling in dit project | Bewijs |
 |--------------|--------------------------|--------|
-| Inventaris van software/componenten | SBOM CycloneDX (`sbom.cdx.json`) + Maven `pom.xml` | [sbom.cdx.json](../sbom.cdx.json), CI artifact |
+| Inventaris van software/componenten | SBOM CycloneDX + Maven `pom.xml` | [bijlage-sbom.cdx.json](bijlage-sbom.cdx.json), CI artifact |
 | Tijdige informatie over kwetsbaarheden | Snyk SCA op elke PR/`main` | `snyk-results.json`, [snyk.yml](../../.github/workflows/snyk.yml) |
 | Beoordeling en prioritering o.b.v. risico | CVSS + bereikbaarheid + patiëntdata (§4–5) | Dit document + [false-positives-beleid.md](../false-positives-beleid.md) |
 | Passende maatregelen (patch/accept/suppress) | Golf 1–3 + SEC-006 backlog | [06-security-backlog.md](06-security-backlog.md) |
@@ -193,10 +194,12 @@ Prioritering volgt [false-positives-beleid.md](../false-positives-beleid.md) §3
 
 | Criterium | Status |
 |-----------|--------|
+| SBOM opgenomen als auditbijlage | ✅ [bijlage-sbom.cdx.json](bijlage-sbom.cdx.json) |
 | Advies gebaseerd op SBOM en scanresultaten | ✅ SBOM + Snyk SCA (CI-run 2026-06-11) |
+| CVE-referenties gecontroleerd (Snyk/NVD) | ✅ §4 — CI-run `27360377078` |
 | Critical en High CVE's geprioriteerd | ✅ §4 en §5 (P1–P3) |
 | Impact en risico van updates benoemd | ✅ §6 |
-| Bruikbaar voor auditrapport §5 | ✅ Bijlage voor [00-auditrapport.md](00-auditrapport.md) |
+| Sluit aan op auditrapport | ✅ [00-auditrapport.md](00-auditrapport.md) §5 |
 
 ---
 
@@ -209,4 +212,4 @@ Prioritering volgt [false-positives-beleid.md](../false-positives-beleid.md) §3
 
 ---
 
-*Versie 1.0 — 2026-06-12. Gebaseerd op Snyk SCA-artifact CI-run `27360377078` (push `main`, 2026-06-11) en SBOM `docs/sbom.cdx.json` (2026-06-03).*
+*Versie 1.1 — 2026-06-17. Gebaseerd op Snyk SCA-artifact CI-run `27360377078` (push `main`, 2026-06-11) en SBOM-bijlage `bijlage-sbom.cdx.json` (2026-06-03).*
