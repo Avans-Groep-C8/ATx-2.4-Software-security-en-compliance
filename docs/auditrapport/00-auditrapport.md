@@ -7,7 +7,7 @@
 **Project:** ATx-2.4 Software Security & Compliance  
 **Normenkader:** NEN 7510-2:2024+A1:2026, aangevuld met CRA-mapping  
 **Datum:** 2026-06-18  
-**Status:** Versie 2.0-concept — traceability matrix nog in behandeling
+**Status:** Versie 2.0-concept — traceability matrix toegevoegd; volledige SAST/CodeQL-artifacts nog exporteren
 
 ---
 
@@ -263,14 +263,13 @@ De audit toont voldoende basis voor een onderbouwd security- en compliancebeeld:
 
 Voor definitieve oplevering en reproduceerbaarheid is aanvullende opvolging nodig. Het advies is:
 
-1. Rond de traceability matrix af en koppel per eis/control de bewijslocatie.
-2. Exporteer de volledige Snyk/CodeQL JSON-artifacts uit CI en voeg deze als SAST-bijlage toe.
-3. Voer dependency Golf 1 uit en draai Snyk opnieuw.
-4. Maak Snyk/CodeQL-triage een harde kwaliteitscontrole of leg afwijkingen formeel vast.
-5. Zet stack traces in productie uit en test foutafhandeling op alle publieke paden.
-6. Borg auditlogging centraal, inclusief auth-, RBAC-, CRUD- en security-events.
-7. Implementeer of documenteer platformmaatregelen: MFA, rate limiting, brute-force bescherming, TLS/HSTS en secret scanning.
-8. Voer een korte regressie-hertest uit op PT-003, PT-004, PT-006 en open stack-trace paden vóór eindoplevering.
+1. Exporteer de volledige Snyk/CodeQL JSON-artifacts uit CI en voeg deze als SAST-bijlage toe.
+2. Voer dependency Golf 1 uit en draai Snyk opnieuw.
+3. Maak Snyk/CodeQL-triage een harde kwaliteitscontrole of leg afwijkingen formeel vast.
+4. Zet stack traces in productie uit en test foutafhandeling op alle publieke paden.
+5. Borg auditlogging centraal, inclusief auth-, RBAC-, CRUD- en security-events.
+6. Implementeer of documenteer platformmaatregelen: MFA, rate limiting, brute-force bescherming, TLS/HSTS en secret scanning.
+7. Voer een korte regressie-hertest uit op PT-003, PT-004, PT-006 en open stack-trace paden vóór eindoplevering.
 
 **Eindoordeel:** geschikt als auditbaar schoolproject/eindrapport met aantoonbare bewijsvoering, maar niet productiegeschikt voor echte patiëntgegevens zonder opvolging van open P1/P2-items en export van de volledige SAST/CodeQL-artifacts.
 
@@ -280,7 +279,7 @@ Voor definitieve oplevering en reproduceerbaarheid is aanvullende opvolging nodi
 
 | Vereiste bijlage | Status | Locatie / toelichting |
 |---|---|---|
-| Traceability matrix | In behandeling | Wordt door groepsgenoot aangeleverd; verwachte koppeling: control → risico → test → bewijs → status |
+| Traceability matrix | Aanwezig | [docs/auditrapport/bijlage-traceability.md](../../docs/auditrapport/bijlage-traceability.md) koppelt control → bevinding → wijziging → bewijs |
 | SBOM (CycloneDX JSON) | Aanwezig | [docs/auditrapport/bijlage-sbom.cdx.json](../../docs/auditrapport/bijlage-sbom.cdx.json), [docs/sbom.cdx.json](../../docs/sbom.cdx.json) |
 | SAST-output | Deels aanwezig | Samenvatting aanwezig in [docs/auditrapport/07-security-code-review.md](../../docs/auditrapport/07-security-code-review.md); volledige CI-artifacts `snyk-sast.json` en CodeQL-export nog exporteren |
 | Snyk-rapport | Aanwezig als samenvatting/advies | [docs/auditrapport/bijlage-dependency-updateadvies.md](../../docs/auditrapport/bijlage-dependency-updateadvies.md), workflow [.github/workflows/snyk.yml](../../.github/workflows/snyk.yml) |
@@ -301,9 +300,8 @@ Voor definitieve oplevering en reproduceerbaarheid is aanvullende opvolging nodi
 
 | Punt | Eigenaar | Nodig voor definitief rapport |
 |---|---|---|
-| Traceability matrix toevoegen | Groepsgenoot | Ja |
 | Volledige Snyk/CodeQL JSON-artifacts exporteren uit CI | Team / repo-admin | Ja |
 | Status inconsistenties tussen oudere risicoanalyse en latere hertest nalopen | Team | Ja |
 | Definitieve acceptatie open restrisico's vastleggen | Product owner / docentcontext | Ja |
 
-*Versie 2.0-concept — 2026-06-18. Samengevoegd eindrapport op basis van bestaande auditdocumenten en bijlagen.*
+*Versie 2.0-concept — 2026-06-18. Samengevoegd eindrapport op basis van bestaande auditdocumenten, traceability matrix en bijlagen.*
