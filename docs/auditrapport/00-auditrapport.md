@@ -69,7 +69,7 @@ De audit is uitgevoerd als document- en technische security-audit met meerdere b
 | Threat modeling | C4-context, trust boundaries, dreigingen | [docs/auditrapport/threat-model.md](../../docs/auditrapport/threat-model.md) |
 | Risicoanalyse | Kans × impact, risicomatrix en backlog | [docs/auditrapport/04-risico-matrix.md](../../docs/auditrapport/04-risico-matrix.md), [docs/auditrapport/06-security-backlog.md](../../docs/auditrapport/06-security-backlog.md) |
 | Bow-tie analyse | Top event T1 en CI/CD secret-leak scenario | [docs/auditrapport/05-bowtie.md](../../docs/auditrapport/05-bowtie.md), [docs/auditrapport/04b-cicd-bow-tie.md](../../docs/auditrapport/04b-cicd-bow-tie.md) |
-| SAST | GitHub CodeQL en Snyk Code | [docs/auditrapport/07-security-code-review.md](../../docs/auditrapport/07-security-code-review.md), [.github/workflows/codeql.yml](../../.github/workflows/codeql.yml) |
+| SAST | GitHub CodeQL en Snyk Code | [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md), [.github/workflows/codeql.yml](../../.github/workflows/codeql.yml) |
 | SCA/SBOM | Snyk SCA en CycloneDX SBOM | [docs/auditrapport/bijlage-dependency-updateadvies.md](../../docs/auditrapport/bijlage-dependency-updateadvies.md), [docs/auditrapport/bijlage-sbom.cdx.json](../../docs/auditrapport/bijlage-sbom.cdx.json) |
 | DAST/pentest | Burp Suite op lokale OpenMRS testomgeving | [docs/pentest/03-bevindingen.md](../../docs/pentest/03-bevindingen.md) |
 | Compliance mapping | NEN 7510-2 en CRA-koppeling | [docs/auditrapport/cra-mapping.md](../../docs/auditrapport/cra-mapping.md) |
@@ -112,7 +112,7 @@ Volledige matrix: [docs/auditrapport/04-risico-matrix.md](../../docs/auditrappor
 Pentest PT-003 toonde aan dat een anonieme gebruiker `POST /ws/rest/v1/cleardbcache` kon uitvoeren met HTTP 204. Dit raakt T1 en T6, omdat een destructieve beheerfunctie beschikbaar was zonder geldige sessie of privilege. De hertest van 2026-06-15 registreert anoniem gebruik als 401.
 
 **Restrisico:** regressie bij toekomstige wijzigingen aan speciale endpoints.  
-**Bewijs:** [docs/pentest/bevinding-PT-003-na.md](../../docs/pentest/bevinding-PT-003-na.md), [docs/auditrapport/07-security-code-review.md](../../docs/auditrapport/07-security-code-review.md).
+**Bewijs:** [docs/pentest/bevinding-PT-003-na.md](../../docs/pentest/bevinding-PT-003-na.md), [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md).
 
 #### F-02 — `settings.form` en stack trace
 
@@ -134,7 +134,7 @@ PT-001, PT-005 en PT-007 tonen dat foutresponses op sommige paden interne detail
 
 **Restrisico:** gerichte aanvallen worden makkelijker door reconnaissance.  
 **Advies:** zet stack traces uit in productie en centraliseer exception handling.  
-**Bewijs:** [docs/pentest/03-bevindingen.md](../../docs/pentest/03-bevindingen.md), [docs/auditrapport/07-security-code-review.md](../../docs/auditrapport/07-security-code-review.md).
+**Bewijs:** [docs/pentest/03-bevindingen.md](../../docs/pentest/03-bevindingen.md), [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md).
 
 #### F-05 — Dependency- en supply-chain kwetsbaarheden
 
@@ -192,7 +192,7 @@ Belangrijke geprioriteerde CVE's zijn opgenomen in [docs/auditrapport/bijlage-de
 | Tool | Type | Output/bewijs |
 |---|---|---|
 | GitHub CodeQL | SAST | GitHub Security tab, workflow [.github/workflows/codeql.yml](../../.github/workflows/codeql.yml) |
-| Snyk Code | SAST | `snyk-sast.json` als CI-artifact; samenvatting in [docs/auditrapport/07-security-code-review.md](../../docs/auditrapport/07-security-code-review.md) |
+| Snyk Code | SAST | `snyk-sast.json` als CI-artifact; samenvatting in [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md) |
 | Snyk test | SCA | `snyk-sca.json` als CI-artifact; samenvatting in [docs/auditrapport/bijlage-dependency-updateadvies.md](../../docs/auditrapport/bijlage-dependency-updateadvies.md) |
 | Syft/CycloneDX | SBOM | [docs/auditrapport/bijlage-sbom.cdx.json](../../docs/auditrapport/bijlage-sbom.cdx.json) |
 
@@ -281,7 +281,7 @@ Voor definitieve oplevering en reproduceerbaarheid is aanvullende opvolging nodi
 |---|---|---|
 | Traceability matrix | Aanwezig | [docs/auditrapport/bijlage-traceability.md](../../docs/auditrapport/bijlage-traceability.md) koppelt control → bevinding → wijziging → bewijs |
 | SBOM (CycloneDX JSON) | Aanwezig | [docs/auditrapport/bijlage-sbom.cdx.json](../../docs/auditrapport/bijlage-sbom.cdx.json), [docs/sbom.cdx.json](../../docs/sbom.cdx.json) |
-| SAST-output | Deels aanwezig | Samenvatting aanwezig in [docs/auditrapport/07-security-code-review.md](../../docs/auditrapport/07-security-code-review.md); volledige CI-artifacts `snyk-sast.json` en CodeQL-export nog exporteren |
+| SAST-output | Deels aanwezig | Samenvatting aanwezig in [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md); volledige CI-artifacts `snyk-sast.json` en CodeQL-export nog exporteren |
 | Snyk-rapport | Aanwezig als samenvatting/advies | [docs/auditrapport/bijlage-dependency-updateadvies.md](../../docs/auditrapport/bijlage-dependency-updateadvies.md), workflow [.github/workflows/snyk.yml](../../.github/workflows/snyk.yml) |
 | Risicomatrix | Aanwezig | [docs/auditrapport/04-risico-matrix.md](../../docs/auditrapport/04-risico-matrix.md), [docs/auditrapport/risicomatrixImage.png](../../docs/auditrapport/risicomatrixImage.png), [docs/auditrapport/risicomatrixImageCICD.png](../../docs/auditrapport/risicomatrixImageCICD.png) |
 | Bow-tie diagrammen | Aanwezig | [docs/auditrapport/05-bowtie.md](../../docs/auditrapport/05-bowtie.md), [docs/auditrapport/04b-cicd-bow-tie.md](../../docs/auditrapport/04b-cicd-bow-tie.md) |
