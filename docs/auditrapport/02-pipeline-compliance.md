@@ -1,73 +1,51 @@
-# 5.2 mini Pipeline compliance
+# 5.6 Mini-complianceverslag - Pipeline (compliant by design)
 
-# Mini-complianceverslag NEN-7510:2024-2 Pipeline-maatregel & Bewijsoverzicht
-
-**Document:** `docs/auditrapport/02-pipeline-compliance.md`
-
----
+**Onderwerp:** geplande CI/CD-pipeline voor de OpenMRS `webservices.rest`-module
+**Norm:** NEN-7510:2024-2 (Beheersmaatregelen, hoofdstuk 5 en 8)
+**Datum:** 3 juni 2026
 
 ## 1. Inleiding
 
-Dit document presenteert de resultaten van de GAP-analyse uitgevoerd op de beveiligingsmodule. Per NEN-7510:2024-2 controlgebied is weergegeven welke pipeline-maatregel aanwezig is, waar het bewijs in de git-repository te vinden is (of verwacht wordt), en wat de geconstateerde GAP of aanbeveling inhoudt.
+Dit mini-complianceverslag is opgesteld **voordat** de pipeline werd gebouwd, volgens het principe *compliant by design*: regelgeving is een ontwerpeis, geen afvinklijstje achteraf. Het hoort bij workshop WS02 (beveiligde pipeline) en beschrijft per relevante NEN-7510:2024-2 control wat de control vereist, hoe we de CI/CD-pipeline gaan inrichten om eraan te voldoen, en welk restrisico er op het moment van schrijven nog is.
 
-De analyse is gebaseerd op NEN-7510:2024-2 (informatiebeveiliging in de zorg), aangevuld met NEN 7512 (vertrouwensbasis gegevensuitwisseling) en NEN 7513 (logging van toegang tot patiëntgegevens). De controlnummering volgt de 2024-editie (5.x organisatorisch, 8.x technisch), consistent met `00-risk-assessment.md` en `06-security-backlog.md`.
+Het team werkt **trunk-based**: er is één langlevende branch (`main`) en geen `test`/`develop`-branches. Wijzigingen komen uitsluitend via een pull request naar `main`, met minimaal één verplichte review en verplichte CI-checks vóór de merge. Omgevingsscheiding (OTAP) wordt niet via branches geregeld maar via GitHub Environments en aparte `docker-compose`-configuraties.
 
----
+De pipeline wordt apart beoordeeld van de applicatiecode; die laatste komt aan bod in de [gap-analyse van de applicatie](01-gap-analyse.md). Samen vormen ze de technische onderbouwing voor het eindauditrapport (WS06). De controlkeuze volgt de relevante controls uit WS02.
 
-## 2. Samenvatting bevindingen
+## 2. Plan per control
 
-| Status | Aantal | Toelichting |
-|----------|--------|-------------|
-| Afwezig | 14 | Maatregel volledig afwezig; direct actie vereist |
-| Gedeeltelijk | 9 | Maatregel gedeeltelijk aanwezig; aanvulling nodig |
-| **Totaal** | **23** | Alle getoetste NEN-7510:2024-2 controlgebieden |
+Per control: de eis (wat de norm vraagt), de geplande pipeline-maatregel, en het restrisico (wat nog niet is ingericht en waarom).
 
----
+| Control (NEN-7510-2) | Eis (kort) | Geplande pipeline-maatregel | Restrisico |
+|---|---|---|---|
+| **8.4 / 8.32** Toegang broncode & wijzigingsbeheer | Toegang tot broncode is beperkt; elke wijziging is traceerbaar naar een persoon. | Trunk-based op `main` met branch protection/ruleset: alleen via PR, minimaal 1 review, alle CI-checks moeten slagen, force-push en directe deletes geblokkeerd (ook voor admins). MFA verplicht voor alle GitHub-accounts; RBAC op de repo; GitHub Audit Log. | Signed commits (PGP) nog niet ingericht; ruleset moet nog worden vastgelegd en aantoonbaar gemaakt (export/screenshot). |
+| **8.8** Beheer technische kwetsbaarheden | Kwetsbaarheden tijdig identificeren, beoordelen en verhelpen. | SAST (CodeQL) in CI; SCA op dependencies (Dependabot en/of Snyk); SBOM in CycloneDX-formaat. Patchbeleid op CVSS: kritiek (9-10) <= 24 uur, hoog (7-8.9) <= 1 week, midden (4-6.9) volgende sprint, laag (<4) geplande release. | Patchbeleid moet formeel worden vastgelegd; afweging rond "dependency cooldown" bij supply-chain-risico nog te maken. |
+| **8.9** Configuratiebeheer | Configuraties beheerd, gedocumenteerd en beschermd tegen ongeautoriseerde wijziging. | Pipeline-as-code: workflows in `.github/workflows/`, versiebeheerd en reviewable. Quality gates blokkeren bij falen. Secrets via GitHub (Environment) Secrets, nooit hardcoded. Immutable artifacts (een fix is een nieuwe build). Externe actions op vaste commit-hash (SHA-pin). | Alerting op wijzigingen in workflow-bestanden nog in te richten (zie 8.16). |
+| **8.16** Monitoring van de pipeline | Activiteiten worden gelogd en gecontroleerd op afwijkingen. | GitHub Security tab + Dependabot alerts; GitHub Audit Log (exporteerbaar naar SIEM); webhooks/notificaties bij kritieke events (mislukte runs, secret-gebruik, wijziging van workflows, deployment-events). | SIEM-koppeling en alerting nog niet ingericht; grotendeels op organisatieniveau te beleggen. |
+| **8.25** Beveiligen tijdens ontwikkelen | Security by design: secure coding, threat modeling, gescheiden omgevingen, authenticatie/autorisatie als ontwerpeis, safe defaults. | Security-stappen ingebed in de pipeline vanaf de eerste commit; threat model in de designfase (bijv. STRIDE); omgevingsscheiding (zie 8.31); veilige standaardconfiguratie. | Threat model moet nog worden opgesteld en gedocumenteerd. |
+| **8.28** Veilig programmeren | Vastgestelde richtlijnen voor veilig coderen, die worden gecontroleerd. | Coding standards (OWASP Secure Coding Practices); linters die bij violations falen in CI (SpotBugs, PMD, Checkstyle); GitHub Secret Scanning + pre-commit hooks (detect-secrets); dependency pinning (exacte versies/hashes, geen `latest`). | Linters en secret scanning nog te activeren in de CI. |
+| **8.29** Beveiligingstests | Beveiligingstests in de ontwikkelcyclus; resultaten als bewijs bewaren. | SAST bij elke commit; Dependency Review bij elke PR (blokkeer nieuwe kwetsbare deps); DAST (OWASP ZAP) op de acceptatieomgeving; testresultaten als pipeline-artifact; pentest bij releases. | DAST en pentest nog niet ingericht; vereisen een acceptatieomgeving (zie 8.31). |
+| **8.31** Scheiding van omgevingen (OTAP) | Gescheiden ontwikkel-, test-, acceptatie- en productieomgeving; productiedata nooit naar een lagere omgeving; gescheiden secrets. | GitHub Environments (minimaal test + productie) met protection rules en approval-gates; gescheiden secrets per omgeving; productie achter goedkeuring (2 approvers + tijdvenster); aparte `docker-compose`-bestanden per omgeving. | Acceptatieomgeving nog niet apart ingericht; volledige OTAP-inrichting volgt in opdracht 1. |
+| **8.33** Testgegevens | Realistische tests met realistische, maar niet echte data. | Synthetische/gegenereerde testdata (bijv. Synthea); productiedata gaat nooit naar lagere omgevingen; gevoelige data zo snel mogelijk verwijderen na gebruik. | Pseudonimisering is technisch lastig; testdata-generatie nog in te richten. |
+| **5.23** Beveiliging clouddiensten (GitHub) | Vastleggen welke clouddiensten worden gebruikt en met welk doel; beheerde toegang; retentiebeleid. | GitHub via organisatie-accounts (geen persoonlijke accounts); optioneel SSO/SAML met de organisatie-IdP; retentiebeleid voor pipeline-logs en artifacts vastleggen. | SSO is optioneel en (nog) niet ingericht; retentiebeleid nog vast te leggen. |
+| **5.30** Bedrijfscontinuïteit (BCM) | Continuïteit en herstel na incident. | Beperkt relevant voor dit project: repository-mirror/backup, een rollback-procedure en RTO/RPO benoemen; de pipeline zelf is onderdeel van het continuïteitsplan. | Door WS02 als minder relevant aangemerkt; alleen op hoofdlijnen uitgewerkt. |
 
-## 3. Controlgebieden — Status: Afwezig
+## 3. Checklist (minimale eisen aantoonbaar compliant pipeline)
 
-De onderstaande controlgebieden zijn volledig afwezig in de module. Er is geen bewijs gevonden van een implementatie of documentatie. Directe actie is vereist.
+Deze checklist (uit WS02) gebruiken we als planningsdoel; afvinken gebeurt naarmate opdracht 1 wordt uitgevoerd.
 
-| Control (NEN-7510:2024-2) | Controlgebied | Status | Pipeline-maatregel | Bewijs (repo) | GAP / Opmerking |
-|----------|---------------|---------|--------------------|---------------|-----------------|
-| 8.5 | Sterke authenticatie (MFA) | Afwezig | Geen MFA-maatregel aanwezig in de pipeline | Niet aangetroffen in `/auth/` of authenticatiemodule | Risicogebaseerde MFA benodigd (SEC-002) |
-| 8.24 / NEN 7512 | Encryptie data-at-rest | Afwezig | Geen encryptie-implementatie beschreven | Niet aangetroffen in infrastructuurconfiguratie of storage | Platformmaatregel nodig (SEC-024) |
-| 8.16 | Monitoring beveiligingsincidenten | Afwezig | Geen monitoringoplossing gedocumenteerd | Niet aangetroffen in `monitoring/` of ops-documentatie | Aanvullende tooling vereist (SEC-021) |
-| 8.16 / 8.8 | Detectie misbruik / anomalieën | Afwezig | Geen anomaliedetectie aanwezig | Niet aangetroffen in `security/` of SIEM-configuratie | SIEM/SOC nodig (SEC-022) |
-| 8.5 / 8.6 | Brute-force bescherming | Afwezig | Geen lockout- of throttlingmechanisme beschreven | Niet aangetroffen in auth/login of middleware | Lockout/rate limiting nodig (SEC-003) |
-| 8.6 / 8.20 | Rate limiting | Afwezig | Geen rate-limiting configuratie aanwezig | Niet aangetroffen in API gateway of middleware | API gateway aanbevolen (SEC-004) |
-| 8.15 | Security logging authenticatie | Afwezig | Geen security-specifieke loginevents gedocumenteerd | Niet aangetroffen in logging/ of auth-events | Uitgebreidere logging nodig (SEC-013) |
-| 8.15 / 5.18 | Logging privilege-escalaties | Afwezig | Geen logging van rolwijzigingen of escalaties | Niet aangetroffen in rbac/ of audit-log module | Extra logging noodzakelijk (SEC-014) |
-| 8.9 / 5.17 | Secrets management | Afwezig | Geen vault of secrets-beheer beschreven | Niet aangetroffen in config/secrets of `.env`-beheer | Buiten scope module — organisatorische maatregel (SEC-005) |
-| 5.19–5.22 | Leveranciersbeveiliging | Afwezig | Geen vendor risk management beschreven | Niet behandeld in module | Organisatorische maatregel (SEC-027) |
-| 5.29 / 5.30 | Continuïteit / beschikbaarheid | Afwezig | Geen BCP/DRP gedocumenteerd | Niet aangetroffen in infra/ of DR-plan | Buiten scope — platformverantwoordelijkheid (SEC-025) |
-| 8.13 | Back-up ondersteuning | Afwezig | Geen back-upstrategie beschreven in module | Niet aangetroffen in backup/ of ops-runbook | Platformverantwoordelijkheid (SEC-026) |
-| 5.24–5.27 | Incidentrespons | Afwezig | Geen IRP gedocumenteerd | Niet aangetroffen in `docs/incident-response.md` | Procesmatig vereist (SEC-023) |
-| 5.36 | Compliance rapportage | Afwezig | Geen compliance-rapportageproces beschreven | Niet aangetroffen in audit-exports of dashboard | Extra tooling nodig (SEC-028) |
+- [ ] Branch protection actief op `main` - alleen via PR, reviews verplicht
+- [ ] Alle CI-checks slagen vóór merge (build, test, SAST)
+- [ ] CodeQL of gelijkwaardige SAST actief (bijv. Snyk)
+- [ ] Secret Scanning actief
+- [ ] Dependabot alerts + security updates actief
+- [ ] Dependency Review Action gekoppeld aan PR's
+- [ ] SBOM gegenereerd (CycloneDX of SPDX) en geanalyseerd (SCA)
+- [ ] GitHub Environments gedefinieerd met protection rules
+- [ ] Secrets gescheiden per environment
+- [ ] Pipeline-artifacts (rapporten, SBOM) worden bewaard
+- [ ] README.md beschrijft beleid en procedure (mini-ISMS)
 
----
+## 4. Conclusie
 
-## 4. Controlgebieden — Status: Gedeeltelijk
-
-De onderstaande controlgebieden zijn gedeeltelijk aanwezig. Een basisimplementatie is gevonden, maar voldoet niet volledig aan de NEN-7510:2024-2 vereisten of is onvoldoende aantoonbaar.
-
-| Control (NEN-7510:2024-2) | Controlgebied | Status | Pipeline-maatregel | Bewijs (repo) | GAP / Opmerking |
-|----------|---------------|---------|--------------------|---------------|-----------------|
-| 8.5 / NEN 7512 | Authenticatie | Gedeeltelijk | Basic Auth en sessietokens aanwezig; MFA ontbreekt | Aangetroffen in auth-module; MFA niet gedocumenteerd | MFA niet standaard aanwezig (SEC-002) |
-| 5.18 / 8.3 | Least privilege | Gedeeltelijk | Privilege-model aanwezig; afdwinging niet aantoonbaar | Aangetroffen in rbac/ of roles/; inrichting onbekend | Afhankelijk van inrichting (SEC-011) |
-| 8.24 / NEN 7512 / NEN 7513 | Encryptie tijdens transport | Gedeeltelijk | HTTPS beschreven; HSTS/redirect niet aantoonbaar | Beschreven in config/ of API-documentatie | Niet aantoonbaar afgedwongen (SEC-009) |
-| 8.15 / NEN 7513 | Logging transacties | Gedeeltelijk | AuditInfo aanwezig; volledige security logging ontbreekt | AuditInfo gevonden in module; dekking onvolledig | Geen volledige security logging (SEC-013) |
-| 8.15 / NEN 7513 | Audit trail zorggegevens | Gedeeltelijk | Creator/changer/timestamps aanwezig; volledigheid niet aantoonbaar | Aangetroffen in datamodel of audit/ | Dekking niet volledig aantoonbaar (SEC-020) |
-| 5.33 / 8.3 | Integriteit van gegevens | Gedeeltelijk | RBAC en API-operaties aanwezig; checksums/signing ontbreken | Aangetroffen in rbac/; expliciete controles ontbreken | Geen expliciete integriteitscontroles (SEC-016) |
-| 8.26 / 8.20 | API security hardening | Gedeeltelijk | IP filtering aanwezig; OAuth2/PKCE/input-validatie ontbreekt | IP filtering in API gateway of config/ | Moderne controls ontbreken (SEC-012) |
-| 5.3 / 5.18 | Functiescheiding | Gedeeltelijk | Rollen aanwezig; organisatorische scheiding niet aantoonbaar | Aangetroffen in rbac/ of roles/ | Organisatorische implementatie vereist (SEC-031) |
-| 8.5 / 5.17 | Wachtwoordbeheer | Gedeeltelijk | Wachtwoord wijzigen mogelijk; policy-afdwinging onbekend | Aangetroffen in auth/ of gebruikersbeheer | Policy enforcement onbekend (SEC-018) |
-
----
-
-## 5. Vervolgstappen
-
-1. Prioriteer de 14 afwezige controls op basis van risiconiveau (MFA, brute-force bescherming en encryptie data-at-rest hebben hoogste prioriteit).
-2. Stel een roadmap op voor implementatie van ontbrekende technische maatregelen binnen de pipeline.
-3. Beleg organisatorische maatregelen (leveranciersbeveiliging, incidentrespons, continuïteit) buiten de module.
-4. Hertoets de gedeeltelijke controls na aanvullende implementatie om volledige NEN-7510:2024-2 compliance aan te tonen.
+Dit plan legt vast hoe de CI/CD-pipeline vanaf het ontwerp aan NEN-7510:2024-2 gaat voldoen: toegang en wijzigingsbeheer via trunk-based PR's met review- en CI-gates (8.4/8.32), kwetsbaarhedenbeheer met SAST, SCA, SBOM en een CVSS-patchbeleid (8.8), configuratiebeheer via pipeline-as-code en secrets-beheer (8.9), en omgevingsscheiding via GitHub Environments (8.31). De belangrijkste restrisico's op dit moment zijn de nog vast te leggen branch-protection-ruleset, het formele patchbeleid, en de acceptatieomgeving voor DAST/pentest. Deze worden in opdracht 1 ingericht en daarna in het eindauditrapport (WS06) met concreet bewijs onderbouwd.

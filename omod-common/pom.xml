@@ -105,7 +105,7 @@
 					<header>${project.parent.basedir}/license-header.txt</header>
 				</configuration>
 			</plugin>
-		</plugins>
+        </plugins>
 	</build>
 
 </project>

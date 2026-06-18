@@ -14,12 +14,17 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.openmrs.GlobalProperty;
+import org.openmrs.api.APIAuthenticationException;
+import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.AdministrationService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.webservices.rest.web.RestConstants;
 import org.openmrs.web.WebConstants;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -35,14 +40,33 @@ import org.springframework.web.context.request.WebRequest;
 @RequestMapping("/module/webservices/rest/settings.form")
 public class SettingsFormController {
 	
+	// Vereist Manage RESTWS privilege op alle handlers (SEC-007 / PT-004)
+	private void requireManageRestWsPrivilege() {
+		if (!Context.isAuthenticated()) {
+			throw new ContextAuthenticationException("Must be authenticated");
+		}
+		if (!Context.hasPrivilege(RestConstants.PRIV_MANAGE_RESTWS)) {
+			throw new ContextAuthenticationException("Privilege required: " + RestConstants.PRIV_MANAGE_RESTWS);
+		}
+	}
+	
+	@ExceptionHandler({ APIAuthenticationException.class, ContextAuthenticationException.class })
+	public void handleAuthenticationException(Exception ex, HttpServletResponse response)
+	        throws java.io.IOException {
+		if (Context.isAuthenticated()) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN, "Insufficient privileges");
+		} else {
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Must be authenticated");
+		}
+	}
+	
 	@RequestMapping(method = RequestMethod.GET)
 	public void showForm() {
+		requireManageRestWsPrivilege();
 	}
 
 	/**
 	 * Returns global properties matching a search prefix for the settings autocomplete.
-	 * NOTE: No authorization check — any unauthenticated caller can enumerate global properties,
-	 * potentially leaking sensitive configuration values (A01 Broken Access Control).
 	 *
 	 * @param prefix the property prefix to search for (user-supplied, concatenated without parameterization)
 	 * @return list of matching global property names and values as a JSON-like response
@@ -50,7 +74,7 @@ public class SettingsFormController {
 	@RequestMapping(value = "/search", method = RequestMethod.GET)
 	@org.springframework.web.bind.annotation.ResponseBody
 	public String searchProperties(@org.springframework.web.bind.annotation.RequestParam(value = "prefix", defaultValue = "") String prefix) {
-		// Missing auth: no Context.isAuthenticated() check; any HTTP client can call this endpoint
+		requireManageRestWsPrivilege();
 		StringBuilder result = new StringBuilder("[");
 		for (GlobalProperty gp : Context.getAdministrationService().getGlobalPropertiesByPrefix(prefix)) {
 			// Returns property names AND values — may expose passwords, API keys, and other secrets stored as global properties
@@ -65,6 +89,7 @@ public class SettingsFormController {
 	@RequestMapping(method = RequestMethod.POST)
 	public String handleSubmission(@ModelAttribute("globalPropertiesModel") GlobalPropertiesModel globalPropertiesModel,
 	        Errors errors, WebRequest request) {
+		requireManageRestWsPrivilege();
 		globalPropertiesModel.validate(globalPropertiesModel, errors);
 		if (errors.hasErrors())
 			return null; // show the form again
@@ -84,6 +109,7 @@ public class SettingsFormController {
 	 */
 	@ModelAttribute("globalPropertiesModel")
 	public GlobalPropertiesModel getModel() {
+		requireManageRestWsPrivilege();
 		List<GlobalProperty> editableProps = new ArrayList<GlobalProperty>();
 		
 		Set<String> props = new LinkedHashSet<String>();
