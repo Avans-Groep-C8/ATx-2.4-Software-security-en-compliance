@@ -1,5 +1,8 @@
 # Copied from https://github.com/github/gitignore
 
+### Audit signing key (private — never commit) ###
+docs/auditrapport/auditor.key
+
 ### IntelliJ Idea ###
 *.iml
 *.ipr
