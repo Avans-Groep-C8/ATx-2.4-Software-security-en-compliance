@@ -227,4 +227,4 @@ Gebruik deze README of de leeswijzer in het pentestrapport als navigatie; niet d
 
 ---
 
-*Laatste update: juni 2026 — Auditteam C8*
+*Laatste update: juni 2026 - Auditteam C8*

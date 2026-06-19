@@ -1,13 +1,13 @@
 # Auditrapport — OpenMRS `webservices.rest`
 
-> **Classificatie (NEN 7510-2:2024+A1:2026 — 5.12):** Vertrouwelijk
+> **Classificatie (NEN 7510-2:2024 - 5.12):** Vertrouwelijk
 
 **Document:** `docs/auditrapport/00-auditrapport.md`  
 **Module:** OpenMRS `webservices.rest` v3.2.0 · OpenMRS-platform 2.8.3  
 **Project:** ATx-2.4 Software Security & Compliance  
-**Normenkader:** NEN 7510-2:2024+A1:2026, aangevuld met CRA-mapping  
+**Normenkader:** NEN 7510-2:2024, aangevuld met CRA-mapping  
 **Datum:** 2026-06-18  
-**Status:** Versie 2.0-concept — traceability matrix toegevoegd; volledige SAST/CodeQL-artifacts nog exporteren
+**Status:** Versie 2.0-concept - traceability matrix toegevoegd; volledige SAST/CodeQL-artifacts nog exporteren
 
 ---
 
@@ -107,28 +107,28 @@ Volledige matrix: [docs/auditrapport/04-risico-matrix.md](../../docs/auditrappor
 
 ### 4.3 Detailbevindingen
 
-#### F-01 — Anonieme `cleardbcache`
+#### F-01 - Anonieme `cleardbcache`
 
 Pentest PT-003 toonde aan dat een anonieme gebruiker `POST /ws/rest/v1/cleardbcache` kon uitvoeren met HTTP 204. Dit raakt T1 en T6, omdat een destructieve beheerfunctie beschikbaar was zonder geldige sessie of privilege. De hertest van 2026-06-15 registreert anoniem gebruik als 401.
 
 **Restrisico:** regressie bij toekomstige wijzigingen aan speciale endpoints.  
 **Bewijs:** [docs/pentest/bevinding-PT-003-na.md](../../docs/pentest/bevinding-PT-003-na.md), [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md).
 
-#### F-02 — `settings.form` en stack trace
+#### F-02 - `settings.form` en stack trace
 
 Pentest PT-004 liet zien dat `settings.form` anoniem bereikbaar was en interne foutdetails lekte. De hertest van 2026-06-15 toont dat anonieme toegang nu 401 geeft. Dit verlaagt het risico op configuratielekken, maar stack traces op andere paden blijven als apart restrisico open.
 
 **Restrisico:** foutafhandeling moet modulebreed consistent zijn.  
 **Bewijs:** [docs/pentest/bevinding-PT-004-na.md](../../docs/pentest/bevinding-PT-004-na.md), [docs/auditrapport/cra-mapping.md](../../docs/auditrapport/cra-mapping.md).
 
-#### F-03 — RBAC op `systemsetting`
+#### F-03 - RBAC op `systemsetting`
 
 Een nurse/testrol kreeg eerder te veel toegang tot `systemsetting`. De hertest bevestigt dat nurse nu 403 krijgt en admin 200. Hiermee is het concrete RBAC-issue gedicht, maar fine-grained autorisatie is nog niet voor elk REST-pad volledig bewezen.
 
 **Restrisico:** ontbrekende autorisatiematrix voor alle resources.  
 **Bewijs:** [docs/pentest/bevinding-PT-006-na.md](../../docs/pentest/bevinding-PT-006-na.md), [docs/auditrapport/06-security-backlog.md](../../docs/auditrapport/06-security-backlog.md).
 
-#### F-04 — Stack traces en foutafhandeling
+#### F-04 - Stack traces en foutafhandeling
 
 PT-001, PT-005 en PT-007 tonen dat foutresponses op sommige paden interne details kunnen bevatten. Dit is vooral een informatielek: het geeft inzicht in interne classes, privileges, controllers en configuratie.
 
@@ -136,7 +136,7 @@ PT-001, PT-005 en PT-007 tonen dat foutresponses op sommige paden interne detail
 **Advies:** zet stack traces uit in productie en centraliseer exception handling.  
 **Bewijs:** [docs/pentest/03-bevindingen.md](../../docs/pentest/03-bevindingen.md), [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md).
 
-#### F-05 — Dependency- en supply-chain kwetsbaarheden
+#### F-05 - Dependency- en supply-chain kwetsbaarheden
 
 Snyk SCA rapporteert 106 unieke kwetsbaarheden over de Maven-modules, waaronder 6 Critical en 53 High. De zwaarste risico's zitten in onder andere Netty, legacy Jackson, Spring, Tomcat/Jasper, PostgreSQL-driver, GraalVM SDK en c3p0. Niet alle dependencies zijn direct door de module te patchen; een deel is platform- of transitive dependency.
 
@@ -144,7 +144,7 @@ Snyk SCA rapporteert 106 unieke kwetsbaarheden over de Maven-modules, waaronder 
 **Advies:** voer Golf 1 binnen één sprint uit, plan platformupdates voor Golf 2 en leg risicoacceptatie vast voor Golf 3.  
 **Bewijs:** [docs/auditrapport/bijlage-dependency-updateadvies.md](../../docs/auditrapport/bijlage-dependency-updateadvies.md), [docs/auditrapport/bijlage-sbom.cdx.json](../../docs/auditrapport/bijlage-sbom.cdx.json).
 
-#### F-06 — Auditlogging en detectie
+#### F-06 - Auditlogging en detectie
 
 De loggingdocumentatie toont dat logging is onderzocht en deels geïmplementeerd, maar dat volledige auditwaardige dekking van authenticatie-, autorisatie-, CRUD-, privilege- en incidentevents nog niet volledig is geborgd.
 
@@ -194,6 +194,7 @@ Belangrijke geprioriteerde CVE's zijn opgenomen in [docs/auditrapport/bijlage-de
 | GitHub CodeQL | SAST | GitHub Security tab, workflow [.github/workflows/codeql.yml](../../.github/workflows/codeql.yml) |
 | Snyk Code | SAST | `snyk-sast.json` als CI-artifact; samenvatting in [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md) |
 | Snyk test | SCA | `snyk-sca.json` als CI-artifact; samenvatting in [docs/auditrapport/bijlage-dependency-updateadvies.md](../../docs/auditrapport/bijlage-dependency-updateadvies.md) |
+| Grype | SCA | SARIF-upload naar GitHub Code Scanning (`category: grype-sca`), workflow [.github/workflows/snyk.yml](../../.github/workflows/snyk.yml) |
 | Syft/CycloneDX | SBOM | [docs/auditrapport/bijlage-sbom.cdx.json](../../docs/auditrapport/bijlage-sbom.cdx.json) |
 
 Samenvatting uit de security code review:
@@ -281,8 +282,8 @@ Voor definitieve oplevering en reproduceerbaarheid is aanvullende opvolging nodi
 |---|---|---|
 | Traceability matrix | Aanwezig | [docs/auditrapport/bijlage-traceability.md](../../docs/auditrapport/bijlage-traceability.md) koppelt control → bevinding → wijziging → bewijs |
 | SBOM (CycloneDX JSON) | Aanwezig | [docs/auditrapport/bijlage-sbom.cdx.json](../../docs/auditrapport/bijlage-sbom.cdx.json), [docs/sbom.cdx.json](../../docs/sbom.cdx.json) |
-| SAST-output | Deels aanwezig | Samenvatting aanwezig in [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md); volledige CI-artifacts `snyk-sast.json` en CodeQL-export nog exporteren |
-| Snyk-rapport | Aanwezig als samenvatting/advies | [docs/auditrapport/bijlage-dependency-updateadvies.md](../../docs/auditrapport/bijlage-dependency-updateadvies.md), workflow [.github/workflows/snyk.yml](../../.github/workflows/snyk.yml) |
+| SAST-output | Aanwezig | Samenvatting: [docs/auditrapport/08-security-code-review.md](../../docs/auditrapport/08-security-code-review.md); CodeQL SARIF: [docs/SAST-Output/actions.sarif](../../docs/SAST-Output/actions.sarif), [docs/SAST-Output/java.sarif](../../docs/SAST-Output/java.sarif) |
+| Snyk-rapport | Aanwezig | [docs/snyk-rapport.json](../../docs/snyk-rapport.json), [docs/auditrapport/bijlage-dependency-updateadvies.md](../../docs/auditrapport/bijlage-dependency-updateadvies.md), workflow [.github/workflows/snyk.yml](../../.github/workflows/snyk.yml) |
 | Risicomatrix | Aanwezig | [docs/auditrapport/04-risico-matrix.md](../../docs/auditrapport/04-risico-matrix.md), [docs/auditrapport/risicomatrixImage.png](../../docs/auditrapport/risicomatrixImage.png), [docs/auditrapport/risicomatrixImageCICD.png](../../docs/auditrapport/risicomatrixImageCICD.png) |
 | Bow-tie diagrammen | Aanwezig | [docs/auditrapport/05-bowtie.md](../../docs/auditrapport/05-bowtie.md), [docs/auditrapport/04b-cicd-bow-tie.md](../../docs/auditrapport/04b-cicd-bow-tie.md) |
 | Threat models | Aanwezig | [docs/auditrapport/threat-model.md](../../docs/auditrapport/threat-model.md), [docs/auditrapport/10-attack-surface.md](../../docs/auditrapport/10-attack-surface.md) |
@@ -292,7 +293,8 @@ Voor definitieve oplevering en reproduceerbaarheid is aanvullende opvolging nodi
 | Pipelinebewijs | Aanwezig | [docs/auditrapport/02-pipeline-compliance.md](../../docs/auditrapport/02-pipeline-compliance.md), [docs/auditrapport/evidence/github-ruleset-main.png](../../docs/auditrapport/evidence/github-ruleset-main.png), [docs/auditrapport/evidence/github-environments-otap.png](../../docs/auditrapport/evidence/github-environments-otap.png) |
 | Loggingbewijs | Aanwezig | [docs/auditrapport/09-logging-gap-analyse.md](../../docs/auditrapport/09-logging-gap-analyse.md), [docs/auditrapport/11-logging-implementatie.md](../../docs/auditrapport/11-logging-implementatie.md), [docs/auditrapport/openmrs-rest-audit.log](../../docs/auditrapport/openmrs-rest-audit.log) |
 | Dependency-updateadvies | Aanwezig | [docs/auditrapport/bijlage-dependency-updateadvies.md](../../docs/auditrapport/bijlage-dependency-updateadvies.md) |
-| Gap-analyse | Aanwezig | [docs/auditrapport/01-gap-analyse.md](../../docs/auditrapport/01-gap-analyse.md), [docs/auditrapport/gap_analyse.xlsx](../../docs/auditrapport/gap_analyse.xlsx) |
+| Gap-analyse | Aanwezig | [docs/auditrapport/01-gap-analyse.md](../../docs/auditrapport/01-gap-analyse.md), [docs/auditrapport/gap-analyse-nen7510.xlsx](../../docs/auditrapport/gap-analyse-nen7510.xlsx) |
+| Bronnen | Aanwezig | [docs/auditrapport/bijlage-bronnen.md](../../docs/auditrapport/bijlage-bronnen.md) — workshops, normen, tools, CVE-referenties en projectdocumenten |
 
 ---
 
@@ -304,4 +306,4 @@ Voor definitieve oplevering en reproduceerbaarheid is aanvullende opvolging nodi
 | Status inconsistenties tussen oudere risicoanalyse en latere hertest nalopen | Team | Ja |
 | Definitieve acceptatie open restrisico's vastleggen | Product owner / docentcontext | Ja |
 
-*Versie 2.0-concept — 2026-06-18. Samengevoegd eindrapport op basis van bestaande auditdocumenten, traceability matrix en bijlagen.*
+*Versie 2.0-concept - 2026-06-18. Samengevoegd eindrapport op basis van bestaande auditdocumenten, traceability matrix en bijlagen.*
